@@ -8,7 +8,6 @@
     <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU" type="text/javascript"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,83 +28,44 @@
             overflow-y: auto;
         }
         
-        .controls h3 { margin-bottom: 10px; font-size: 16px; color: #333; }
-        .form-group { margin-bottom: 10px; }
-        .form-group label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: #555; }
-        .form-group input, .form-group select { width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+        .controls h3 { margin-bottom: 10px; font-size: 16px; }
+        .stats { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+        .stats div { margin: 5px 0; font-size: 12px; }
         
         button {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             margin: 5px 0;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
         }
         
-        .btn-primary { background: #4CAF50; color: white; }
-        .btn-primary:hover { background: #45a049; }
-        .btn-secondary { background: #2196F3; color: white; }
-        .btn-secondary:hover { background: #0b7dda; }
+        .btn-primary { background: #2196F3; color: white; }
         .btn-warning { background: #ff9800; color: white; }
         .btn-danger { background: #f44336; color: white; }
+        .btn-success { background: #4CAF50; color: white; }
         .btn-login { background: #9c27b0; color: white; }
-        .btn-sync { background: #00BCD4; color: white; }
-        .btn-sync:hover { background: #0097A7; }
         
         .legend {
             position: fixed;
             bottom: 10px;
             left: 10px;
             background: white;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             z-index: 1000;
-            font-size: 12px;
         }
         
-        .legend-item { display: flex; align-items: center; margin: 6px 0; }
-        .legend-pin {
-            width: 24px;
-            height: 32px;
-            margin-right: 10px;
-            position: relative;
-        }
-        .legend-pin::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 5px;
-            width: 14px;
-            height: 14px;
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        .legend-pin.pin-blue::before { background: #2196F3; }
-        .legend-pin.pin-red::before { background: #f44336; }
-        .legend-pin.pin-orange::before { background: #ff9800; }
-        .legend-pin.pin-green::before { background: #4CAF50; }
-        
-        .admin-panel {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            display: none;
-        }
-        .admin-panel.show { display: block; }
-        
-        .stats {
-            margin-top: 10px;
-            padding: 8px;
-            background: #f5f5f5;
-            border-radius: 4px;
-            font-size: 11px;
-        }
-        .stats div { margin: 3px 0; }
+        .legend-item { display: flex; align-items: center; margin: 5px 0; font-size: 12px; }
+        .legend-color { width: 16px; height: 16px; margin-right: 8px; border-radius: 50%; }
+        .blue { background: #2196F3; }
+        .red { background: #f44336; }
+        .orange { background: #ff9800; }
+        .green { background: #4CAF50; }
         
         .modal {
             display: none;
@@ -113,36 +73,23 @@
             z-index: 2000;
             left: 0; top: 0;
             width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.5);
         }
         
         .modal-content {
-            background-color: white;
+            background: white;
             margin: 15% auto;
             padding: 20px;
             border-radius: 8px;
             width: 300px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
         
-        .modal-content h4 { margin-bottom: 15px; color: #333; }
         .modal-content input, .modal-content textarea {
             width: 100%;
             padding: 8px;
             margin: 10px 0;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 14px;
-        }
-        .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
-        .modal-buttons button { flex: 1; }
-        
-        .info-box {
-            background: #e3f2fd;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-            font-size: 11px;
         }
     </style>
 </head>
@@ -152,102 +99,33 @@
     <div class="controls">
         <h3>📍 Карта БС МТС</h3>
         
-        <div class="stats" id="stats">
-            <div>📊 Всего БС: <strong id="totalCount">0</strong></div>
-            <div>🔵 Новые: <strong id="newCount">0</strong></div>
-            <div>🔴 Проблемные: <strong id="problemCount">0</strong></div>
-            <div>🟠 В работе: <strong id="progressCount">0</strong></div>
-            <div>🟢 Выполнено: <strong id="doneCount">0</strong></div>
+        <div class="stats">
+            <div><strong>Всего БС:</strong> <span id="totalCount">0</span></div>
+            <div style="color: #2196F3">🔵 Новые: <span id="newCount">0</span></div>
+            <div style="color: #f44336">🔴 Проблемные: <span id="problemCount">0</span></div>
+            <div style="color: #ff9800">🟠 В работе: <span id="progressCount">0</span></div>
+            <div style="color: #4CAF50">🟢 Выполнено: <span id="doneCount">0</span></div>
         </div>
         
-        <div class="info-box">
-            <strong>💡 Синхронизация с Excel:</strong><br>
-            1. Запустите: <code>python load_excel_fixed.py</code><br>
-            2. Данные загрузятся автоматически
-        </div>
-        
-        <button class="btn-sync" onclick="downloadSyncedExcel()">📥 Скачать обновлённый Excel</button>
-        <button class="btn-secondary" onclick="resetView()">🗺️ Сбросить вид карты</button>
+        <button class="btn-primary" onclick="resetView()">🗺️ Сбросить вид</button>
         <button class="btn-warning" onclick="testFirebase()">🔌 Проверить Firebase</button>
-        
-        <div class="admin-panel" id="adminPanel">
-            <h4>🔧 Админ панель</h4>
-            <div class="form-group">
-                <label>№ БС:</label>
-                <input type="text" id="bsNumber" />
-            </div>
-            <div class="form-group">
-                <label>Адрес:</label>
-                <input type="text" id="bsAddress" />
-            </div>
-            <div class="form-group">
-                <label>Широта:</label>
-                <input type="number" step="0.000001" id="bsLat" />
-            </div>
-            <div class="form-group">
-                <label>Долгота:</label>
-                <input type="number" step="0.000001" id="bsLon" />
-            </div>
-            <div class="form-group">
-                <label>Оборудование:</label>
-                <input type="text" id="bsEquipment" />
-            </div>
-            <div class="form-group">
-                <label>Статус:</label>
-                <select id="bsStatus">
-                    <option value="new">🔵 Новая</option>
-                    <option value="problem">🔴 Проблемная</option>
-                    <option value="in_progress">🟠 В работе</option>
-                    <option value="done">🟢 Выполнено</option>
-                </select>
-            </div>
-            <button class="btn-primary" onclick="addOrUpdateBS()">💾 Сохранить</button>
-            <button class="btn-danger" onclick="deleteBS()">🗑️ Удалить БС</button>
-        </div>
-        
-        <button class="btn-login" id="loginBtn" onclick="toggleAdmin()">👤 Вход как админ</button>
+        <button class="btn-login" onclick="toggleAdmin()">👤 Вход как админ</button>
     </div>
     
     <div class="legend">
-        <div class="legend-item">
-            <div class="legend-pin pin-blue"></div>
-            <span>🔵 Новая</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-pin pin-red"></div>
-            <span>🔴 Проблемная</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-pin pin-orange"></div>
-            <span>🟠 В работе</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-pin pin-green"></div>
-            <span>🟢 Выполнено</span>
-        </div>
+        <div class="legend-item"><div class="legend-color blue"></div>🔵 Новая</div>
+        <div class="legend-item"><div class="legend-color red"></div>🔴 Проблемная</div>
+        <div class="legend-item"><div class="legend-color orange"></div>🟠 В работе</div>
+        <div class="legend-item"><div class="legend-color green"></div>🟢 Выполнено</div>
     </div>
 
     <div id="workerModal" class="modal">
         <div class="modal-content">
             <h4>👷 Взять БС в работу</h4>
-            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Введите вашу фамилию:</p>
+            <p style="font-size: 12px; margin: 10px 0;">Введите фамилию:</p>
             <input type="text" id="workerName" placeholder="Иванов И.И." />
-            <div class="modal-buttons">
-                <button class="btn-primary" onclick="confirmTakeToWork()">✅ Взять в работу</button>
-                <button class="btn-danger" onclick="closeModal()">❌ Отмена</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="problemModal" class="modal">
-        <div class="modal-content">
-            <h4>🔴 Отметить как проблемную</h4>
-            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Опишите проблему:</p>
-            <textarea id="problemReason" rows="3" placeholder="Например: нет ключа, закрыт доступ..."></textarea>
-            <div class="modal-buttons">
-                <button class="btn-danger" onclick="confirmMarkProblem()">🔴 Отметить</button>
-                <button class="btn-secondary" onclick="closeProblemModal()">❌ Отмена</button>
-            </div>
+            <button class="btn-success" onclick="confirmTakeToWork()">✅ Взять в работу</button>
+            <button class="btn-danger" onclick="closeModal()">❌ Отмена</button>
         </div>
     </div>
 
@@ -267,8 +145,7 @@
         const bsRef = database.ref('base_stations');
         
         let myMap;
-        let markersCollection = null;
-        let isAdmin = false;
+        let markersCollection;
         let selectedBsKey = null;
         let allBS = {};
         
@@ -279,58 +156,55 @@
             'done': '#4CAF50'
         };
         
-        const statusLabels = {
-            'new': 'Новая',
-            'problem': 'Проблемная',
-            'in_progress': 'В работе',
-            'done': 'Выполнено'
-        };
-        
         ymaps.ready(init);
         
         function init() {
             myMap = new ymaps.Map("map", {
                 center: [55.95, 37.6],
-                zoom: 11,
-                controls: ['zoomControl', 'searchControl', 'typeSelector', 'fullscreenControl']
+                zoom: 11
             });
             
             markersCollection = new ymaps.GeoObjectCollection();
             myMap.geoObjects.add(markersCollection);
+            
+            console.log("✅ Карта инициализирована");
             loadDataFromFirebase();
         }
         
         function loadDataFromFirebase() {
+            console.log("🔄 Загрузка данных из Firebase...");
+            
             bsRef.on('value', (snapshot) => {
                 const data = snapshot.val();
                 allBS = data || {};
                 
+                console.log(`📊 Получено записей: ${Object.keys(allBS).length}`);
+                
                 markersCollection.removeAll();
                 
-                let newCount = 0, problemCount = 0, progressCount = 0, doneCount = 0;
+                let counts = { new: 0, problem: 0, in_progress: 0, done: 0 };
                 
                 if (data) {
                     Object.keys(data).forEach(key => {
                         const bs = data[key];
                         const color = statusColors[bs.status] || statusColors['new'];
                         
-                        const shortNumber = bs.number ? bs.number.replace('PL_77_', '') : '';
-                        
                         const placemark = new ymaps.Placemark(
                             [bs.lat, bs.lon],
                             {
-                                balloonContentHeader: `<strong>${bs.number || 'БС'}</strong>`,
-                                balloonContentBody: createBalloonContent(key, bs),
-                                balloonContentFooter: `Статус: ${statusLabels[bs.status] || 'Новая'}`,
-                                hintContent: `${bs.number || 'БС'} - ${bs.address || ''}`,
-                                iconContent: shortNumber
+                                balloonContentHeader: bs.number || 'БС',
+                                balloonContentBody: `
+                                    <div style="max-width: 250px;">
+                                        <p><strong>Адрес:</strong> ${bs.address || 'Не указан'}</p>
+                                        <p><strong>Статус:</strong> ${bs.status}</p>
+                                        ${bs.worker ? `<p><strong>Монтажник:</strong> ${bs.worker}</p>` : ''}
+                                    </div>
+                                `,
+                                hintContent: `${bs.number} - ${bs.address}`
                             },
                             {
-                                preset: 'islands#stretchyCircleIcon',
-                                iconColor: color,
-                                iconCaption: shortNumber,
-                                iconCaptionFontColor: '#ffffff',
-                                iconCaptionFontSize: 12
+                                preset: 'islands#circleIcon',
+                                iconColor: color
                             }
                         );
                         
@@ -339,287 +213,64 @@
                         });
                         
                         markersCollection.add(placemark);
-                        
-                        if (bs.status === 'new') newCount++;
-                        else if (bs.status === 'problem') problemCount++;
-                        else if (bs.status === 'in_progress') progressCount++;
-                        else if (bs.status === 'done') doneCount++;
+                        counts[bs.status] = (counts[bs.status] || 0) + 1;
                     });
                 }
                 
                 document.getElementById('totalCount').textContent = Object.keys(data || {}).length;
-                document.getElementById('newCount').textContent = newCount;
-                document.getElementById('problemCount').textContent = problemCount;
-                document.getElementById('progressCount').textContent = progressCount;
-                document.getElementById('doneCount').textContent = doneCount;
+                document.getElementById('newCount').textContent = counts.new || 0;
+                document.getElementById('problemCount').textContent = counts.problem || 0;
+                document.getElementById('progressCount').textContent = counts.in_progress || 0;
+                document.getElementById('doneCount').textContent = counts.done || 0;
+                
+                console.log(`✅ Загружено маркеров: ${Object.keys(data || {}).length}`);
+            }, (error) => {
+                console.error("❌ Ошибка загрузки:", error);
+                alert("Ошибка загрузки данных: " + error.message);
             });
         }
-        
-        function createBalloonContent(key, bs) {
-            let buttons = '';
-            if (!isAdmin) {
-                if (bs.status === 'new' || bs.status === 'problem') {
-                    buttons = `
-                        <div style="margin-top: 10px;">
-                            <button onclick="window.openWorkerModal('${key}')" 
-                                    style="background: #ff9800; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px; font-weight: bold;">
-                                🟠 Взять в работу
-                            </button>
-                            <button onclick="window.openProblemModal('${key}')" 
-                                    style="background: #f44336; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px;">
-                                🔴 Проблемная
-                            </button>
-                        </div>
-                    `;
-                } else if (bs.status === 'in_progress') {
-                    buttons = `
-                        <div style="margin-top: 10px;">
-                            <button onclick="window.markAsDone('${key}')" 
-                                    style="background: #4CAF50; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px; font-weight: bold;">
-                                🟢 Выполнено
-                            </button>
-                            <button onclick="window.markAsNew('${key}')" 
-                                    style="background: #2196F3; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px;">
-                                🔵 Вернуть в новые
-                            </button>
-                        </div>
-                    `;
-                } else if (bs.status === 'done') {
-                    buttons = `
-                        <div style="margin-top: 10px;">
-                            <button onclick="window.markAsNew('${key}')" 
-                                    style="background: #2196F3; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px;">
-                                🔵 Вернуть в новые
-                            </button>
-                        </div>
-                    `;
-                }
-            } else {
-                buttons = `
-                    <div style="margin-top: 10px;">
-                        <button onclick="window.selectForEdit('${key}')" 
-                                style="background: #2196F3; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px;">
-                            ✏️ Редактировать
-                        </button>
-                    </div>
-                `;
-            }
-            
-            let workerHtml = '';
-            if (bs.worker) {
-                workerHtml = `<div style="margin-top:8px; padding:8px; background:#fff3e0; border-radius:4px; border-left:3px solid #ff9800;">
-                    <strong>👷 Монтажник:</strong> <span style="color:#e65100; font-weight:bold; font-size:14px;">${bs.worker}</span>
-                </div>`;
-            }
-            
-            let problemHtml = '';
-            if (bs.problemReason) {
-                problemHtml = `<div style="margin-top:8px; padding:8px; background:#ffebee; border-radius:4px; border-left:3px solid #f44336;">
-                    <strong>⚠️ Проблема:</strong> ${bs.problemReason}
-                </div>`;
-            }
-            
-            return `
-                <div style="max-width: 300px; font-size: 13px; line-height: 1.5;">
-                    <p><strong>📍 Адрес:</strong> ${bs.address || 'Не указан'}</p>
-                    <p><strong>📡 Оборудование:</strong> ${bs.equipment || 'Не указано'}</p>
-                    <p><strong>🌐 Координаты:</strong> ${bs.lat.toFixed(6)}, ${bs.lon.toFixed(6)}</p>
-                    <p><strong>📊 Статус:</strong> <span style="font-weight: bold; font-size: 14px;">${statusLabels[bs.status] || 'Новая'}</span></p>
-                    ${workerHtml}
-                    ${problemHtml}
-                    ${buttons}
-                </div>
-            `;
-        }
-        
-        window.openWorkerModal = function(key) {
-            selectedBsKey = key;
-            document.getElementById('workerModal').style.display = 'block';
-            document.getElementById('workerName').value = '';
-            setTimeout(() => document.getElementById('workerName').focus(), 100);
-        };
-        
-        window.closeModal = function() {
-            document.getElementById('workerModal').style.display = 'none';
-            selectedBsKey = null;
-        };
         
         window.confirmTakeToWork = function() {
             const workerName = document.getElementById('workerName').value.trim();
             if (!workerName) {
-                alert('⚠️ Введите фамилию!');
+                alert('Введите фамилию!');
                 return;
             }
             
             if (selectedBsKey) {
                 bsRef.child(selectedBsKey).update({ 
                     status: 'in_progress',
-                    worker: workerName,
-                    problemReason: '',
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                    worker: workerName
                 });
+                alert('✅ БС взята в работу!');
             }
             closeModal();
         };
         
-        window.openProblemModal = function(key) {
-            selectedBsKey = key;
-            document.getElementById('problemModal').style.display = 'block';
-            document.getElementById('problemReason').value = '';
-            setTimeout(() => document.getElementById('problemReason').focus(), 100);
+        window.closeModal = function() {
+            document.getElementById('workerModal').style.display = 'none';
         };
         
-        window.closeProblemModal = function() {
-            document.getElementById('problemModal').style.display = 'none';
-            selectedBsKey = null;
+        window.resetView = function() {
+            myMap.setCenter([55.95, 37.6], 11);
         };
-        
-        window.confirmMarkProblem = function() {
-            const reason = document.getElementById('problemReason').value.trim();
-            if (!reason) {
-                alert('⚠️ Опишите проблему!');
-                return;
-            }
-            
-            if (selectedBsKey) {
-                bsRef.child(selectedBsKey).update({ 
-                    status: 'problem',
-                    problemReason: reason,
-                    worker: '',
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
-                });
-            }
-            closeProblemModal();
-        };
-        
-        window.markAsDone = function(key) {
-            if (confirm('Отметить БС как выполненную?')) {
-                bsRef.child(key).update({ 
-                    status: 'done',
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
-                });
-            }
-        };
-        
-        window.markAsNew = function(key) {
-            if (confirm('Вернуть БС в статус "Новая"?')) {
-                bsRef.child(key).update({ 
-                    status: 'new',
-                    worker: '',
-                    problemReason: '',
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
-                });
-            }
-        };
-        
-        window.selectForEdit = function(key) {
-            const bs = allBS[key];
-            if (bs) {
-                document.getElementById('bsNumber').value = bs.number || '';
-                document.getElementById('bsAddress').value = bs.address || '';
-                document.getElementById('bsLat').value = bs.lat || '';
-                document.getElementById('bsLon').value = bs.lon || '';
-                document.getElementById('bsEquipment').value = bs.equipment || '';
-                document.getElementById('bsStatus').value = bs.status || 'new';
-                selectedBsKey = key;
-                alert('✅ Данные загружены в форму');
-            }
-        };
-        
-        window.downloadSyncedExcel = function() {
-            if (Object.keys(allBS).length === 0) { 
-                alert('Нет данных для скачивания'); 
-                return; 
-            }
-            
-            if (typeof XLSX === 'undefined') {
-                alert('⚠️ Используйте Python скрипт для получения Excel с цветами');
-                return;
-            }
-            
-            const dataArray = Object.values(allBS).map(bs => ({
-                '№ БС': bs.number,
-                'Адрес': bs.address,
-                'Широта': bs.lat,
-                'Долгота': bs.lon,
-                'Оборудование': bs.equipment,
-                'Статус': statusLabels[bs.status] || 'Новая',
-                'Монтажник': bs.worker || '',
-                'Проблема': bs.problemReason || ''
-            }));
-            
-            const ws = XLSX.utils.json_to_sheet(dataArray);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "БС");
-            XLSX.writeFile(wb, `БС_синхронизация_${new Date().toISOString().split('T')[0]}.xlsx`);
-        };
-        
-        window.resetView = function() { myMap.setCenter([55.95, 37.6], 11); };
         
         window.testFirebase = function() {
-            bsRef.once('value', (snapshot) => {
+            bsRef.once('value').then((snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    alert(`✅ Firebase подключен!\nВ базе ${Object.keys(data).length} БС`);
-                } else {
-                    alert('⚠️ Firebase подключен, но база пуста');
-                }
-            }).catch(err => { alert('❌ Ошибка Firebase:\n' + err.message); });
+                alert(`✅ Firebase подключен!\nВ базе: ${Object.keys(data || {}).length} БС`);
+            }).catch(err => {
+                alert('❌ Ошибка: ' + err.message);
+            });
         };
         
         window.toggleAdmin = function() {
-            if (!isAdmin) {
-                const password = prompt('Введите пароль администратора:');
-                if (password === 'admin123') {
-                    isAdmin = true;
-                    document.getElementById('loginBtn').textContent = '👤 Выход (Админ)';
-                    document.getElementById('adminPanel').classList.add('show');
-                    alert('✅ Вы вошли как администратор');
-                } else if (password !== null) {
-                    alert('❌ Неверный пароль');
-                }
+            const password = prompt('Пароль:');
+            if (password === 'admin123') {
+                alert('✅ Админ панель будет добавлена');
             } else {
-                isAdmin = false;
-                document.getElementById('loginBtn').textContent = '👤 Вход как админ';
-                document.getElementById('adminPanel').classList.remove('show');
-                selectedBsKey = null;
+                alert('❌ Неверный пароль');
             }
-        };
-        
-        window.addOrUpdateBS = function() {
-            if (!isAdmin) return;
-            const bsData = {
-                number: document.getElementById('bsNumber').value,
-                address: document.getElementById('bsAddress').value,
-                lat: parseFloat(document.getElementById('bsLat').value),
-                lon: parseFloat(document.getElementById('bsLon').value),
-                equipment: document.getElementById('bsEquipment').value,
-                status: document.getElementById('bsStatus').value,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            };
-            if (selectedBsKey) {
-                bsRef.child(selectedBsKey).update(bsData);
-                alert('✅ БС обновлена');
-            } else {
-                const key = bsRef.push().key;
-                bsRef.child(key).set(bsData);
-                alert('✅ БС добавлена');
-            }
-            selectedBsKey = null;
-        };
-        
-        window.deleteBS = function() {
-            if (!isAdmin || !selectedBsKey) return;
-            if (confirm('Удалить эту БС?')) {
-                bsRef.child(selectedBsKey).remove();
-                selectedBsKey = null;
-                alert('✅ БС удалена');
-            }
-        };
-        
-        window.onclick = function(event) {
-            if (event.target == document.getElementById('workerModal')) closeModal();
-            if (event.target == document.getElementById('problemModal')) closeProblemModal();
         };
     </script>
 </body>
