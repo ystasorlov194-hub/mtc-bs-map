@@ -162,11 +162,11 @@
         
         <div class="info-box">
             <strong>💡 Синхронизация с Excel:</strong><br>
-            1. Запустите: <code>python sync_excel_firebase.py</code><br>
-            2. Выберите "3. Полный цикл"
+            1. Запустите: <code>python load_excel_fixed.py</code><br>
+            2. Данные загрузятся автоматически
         </div>
         
-        <button class="btn-sync" onclick="downloadSyncedExcel()"> Скачать обновлённый Excel</button>
+        <button class="btn-sync" onclick="downloadSyncedExcel()">📥 Скачать обновлённый Excel</button>
         <button class="btn-secondary" onclick="resetView()">🗺️ Сбросить вид карты</button>
         <button class="btn-warning" onclick="testFirebase()">🔌 Проверить Firebase</button>
         
@@ -198,7 +198,7 @@
                     <option value="new">🔵 Новая</option>
                     <option value="problem">🔴 Проблемная</option>
                     <option value="in_progress">🟠 В работе</option>
-                    <option value="done"> Выполнено</option>
+                    <option value="done">🟢 Выполнено</option>
                 </select>
             </div>
             <button class="btn-primary" onclick="addOrUpdateBS()">💾 Сохранить</button>
@@ -211,7 +211,7 @@
     <div class="legend">
         <div class="legend-item">
             <div class="legend-pin pin-blue"></div>
-            <span> Новая</span>
+            <span>🔵 Новая</span>
         </div>
         <div class="legend-item">
             <div class="legend-pin pin-red"></div>
@@ -229,12 +229,12 @@
 
     <div id="workerModal" class="modal">
         <div class="modal-content">
-            <h4> Взять БС в работу</h4>
+            <h4>👷 Взять БС в работу</h4>
             <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Введите вашу фамилию:</p>
             <input type="text" id="workerName" placeholder="Иванов И.И." />
             <div class="modal-buttons">
                 <button class="btn-primary" onclick="confirmTakeToWork()">✅ Взять в работу</button>
-                <button class="btn-danger" onclick="closeModal()"> Отмена</button>
+                <button class="btn-danger" onclick="closeModal()">❌ Отмена</button>
             </div>
         </div>
     </div>
@@ -358,7 +358,7 @@
         function createBalloonContent(key, bs) {
             let buttons = '';
             if (!isAdmin) {
-                if (bs.status === 'new') {
+                if (bs.status === 'new' || bs.status === 'problem') {
                     buttons = `
                         <div style="margin-top: 10px;">
                             <button onclick="window.openWorkerModal('${key}')" 
@@ -368,19 +368,6 @@
                             <button onclick="window.openProblemModal('${key}')" 
                                     style="background: #f44336; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px;">
                                 🔴 Проблемная
-                            </button>
-                        </div>
-                    `;
-                } else if (bs.status === 'problem') {
-                    buttons = `
-                        <div style="margin-top: 10px;">
-                            <button onclick="window.openWorkerModal('${key}')" 
-                                    style="background: #ff9800; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px; font-weight: bold;">
-                                🟠 Взять в работу
-                            </button>
-                            <button onclick="window.markAsNew('${key}')" 
-                                    style="background: #2196F3; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin: 2px; font-size: 13px;">
-                                🔵 Вернуть в новые
                             </button>
                         </div>
                     `;
@@ -421,7 +408,7 @@
             let workerHtml = '';
             if (bs.worker) {
                 workerHtml = `<div style="margin-top:8px; padding:8px; background:#fff3e0; border-radius:4px; border-left:3px solid #ff9800;">
-                    <strong> Монтажник:</strong> <span style="color:#e65100; font-weight:bold; font-size:14px;">${bs.worker}</span>
+                    <strong>👷 Монтажник:</strong> <span style="color:#e65100; font-weight:bold; font-size:14px;">${bs.worker}</span>
                 </div>`;
             }
             
@@ -434,10 +421,10 @@
             
             return `
                 <div style="max-width: 300px; font-size: 13px; line-height: 1.5;">
-                    <p><strong> Адрес:</strong> ${bs.address || 'Не указан'}</p>
+                    <p><strong>📍 Адрес:</strong> ${bs.address || 'Не указан'}</p>
                     <p><strong>📡 Оборудование:</strong> ${bs.equipment || 'Не указано'}</p>
                     <p><strong>🌐 Координаты:</strong> ${bs.lat.toFixed(6)}, ${bs.lon.toFixed(6)}</p>
-                    <p><strong> Статус:</strong> <span style="font-weight: bold; font-size: 14px;">${statusLabels[bs.status] || 'Новая'}</span></p>
+                    <p><strong>📊 Статус:</strong> <span style="font-weight: bold; font-size: 14px;">${statusLabels[bs.status] || 'Новая'}</span></p>
                     ${workerHtml}
                     ${problemHtml}
                     ${buttons}
@@ -490,7 +477,7 @@
         window.confirmMarkProblem = function() {
             const reason = document.getElementById('problemReason').value.trim();
             if (!reason) {
-                alert('️ Опишите проблему!');
+                alert('⚠️ Опишите проблему!');
                 return;
             }
             
@@ -539,7 +526,6 @@
             }
         };
         
-        // Скачать обновлённый Excel с цветами
         window.downloadSyncedExcel = function() {
             if (Object.keys(allBS).length === 0) { 
                 alert('Нет данных для скачивания'); 
@@ -547,11 +533,10 @@
             }
             
             if (typeof XLSX === 'undefined') {
-                alert('️ Используйте Python скрипт для получения Excel с цветами:\npython sync_excel_firebase.py\n(выберите пункт 2)');
+                alert('⚠️ Используйте Python скрипт для получения Excel с цветами');
                 return;
             }
             
-            // Создаём данные с дополнительными столбцами
             const dataArray = Object.values(allBS).map(bs => ({
                 '№ БС': bs.number,
                 'Адрес': bs.address,
@@ -577,7 +562,7 @@
                 if (data) {
                     alert(`✅ Firebase подключен!\nВ базе ${Object.keys(data).length} БС`);
                 } else {
-                    alert('⚠️ Firebase подключен, но база пуста.\nЗапустите: python sync_excel_firebase.py');
+                    alert('⚠️ Firebase подключен, но база пуста');
                 }
             }).catch(err => { alert('❌ Ошибка Firebase:\n' + err.message); });
         };
