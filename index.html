@@ -39,11 +39,12 @@
     
     <div class="panel">
         <h3>📍 Карта БС МТС</h3>
-        <div class="stat">📊 Всего: <b id="total">0</b></div>
-        <div class="stat" style="color:#2196F3">🔵 Новые: <b id="count-new">0</b></div>
-        <div class="stat" style="color:#f44336">🔴 Проблемные: <b id="count-problem">0</b></div>
-        <div class="stat" style="color:#ff9800"> В работе: <b id="count-progress">0</b></div>
-        <div class="stat" style="color:#9b59b6">🟣 Свободный доступ: <b id="count-free">0</b></div>
+        <div class="stat"> Всего: <b id="total">0</b></div>
+<div class="stat" style="color:#2196F3">🔵 Новые: <b id="count-new">0</b></div>
+<div class="stat" style="color:#f44336">🔴 Проблемные: <b id="count-problem">0</b></div>
+<div class="stat" style="color:#ff9800">🟡 В работе: <b id="count-progress">0</b></div>
+<div class="stat" style="color:#4CAF50">🟢 Выполнено: <b id="count-done">0</b></div>
+<div class="stat" style="color:#9b59b6">🟣 Свободный доступ: <b id="count-free">0</b></div>
         <hr>
         <button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
     </div>
@@ -136,10 +137,11 @@
                 objectManager.add(features);
 
                 document.getElementById('total').textContent = Object.keys(data).length;
-                document.getElementById('count-new').textContent = counts.new || 0;
-                document.getElementById('count-problem').textContent = counts.problem || 0;
-                document.getElementById('count-progress').textContent = counts.in_progress || 0;
-                document.getElementById('count-free').textContent = counts.free_access || 0;
+document.getElementById('count-new').textContent = counts.new || 0;
+document.getElementById('count-problem').textContent = counts.problem || 0;
+document.getElementById('count-progress').textContent = counts.in_progress || 0;
+document.getElementById('count-done').textContent = counts.done || 0;
+document.getElementById('count-free').textContent = counts.free_access || 0;
             });
         }
 
