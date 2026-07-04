@@ -3,130 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карта БС - МТС (Яндекс Карты)</title>
-    
-    <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU" type="text/javascript"></script>
+    <title>Карта БС МТС</title>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; overflow: hidden; }
-        #map { height: 100vh; width: 100%; }
-        
-        .controls {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            max-width: 320px;
-            max-height: 90vh;
-            overflow-y: auto;
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        .panel {
+            position: fixed; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 300px;
         }
-        
-        .controls h3 { margin-bottom: 10px; font-size: 16px; }
-        .stats { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; }
-        .stats div { margin: 5px 0; font-size: 12px; }
-        
-        button {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: bold;
-        }
-        
-        .btn-primary { background: #2196F3; color: white; }
-        .btn-warning { background: #ff9800; color: white; }
-        .btn-danger { background: #f44336; color: white; }
-        .btn-success { background: #4CAF50; color: white; }
-        .btn-login { background: #9c27b0; color: white; }
-        
+        .panel h3 { margin: 0 0 10px 0; font-size: 16px; }
+        .stat { margin: 5px 0; font-size: 13px; }
         .legend {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            z-index: 1000;
+            position: fixed; bottom: 10px; left: 10px; z-index: 1000;
+            background: white; padding: 10px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 12px;
         }
-        
-        .legend-item { display: flex; align-items: center; margin: 5px 0; font-size: 12px; }
-        .legend-color { width: 16px; height: 16px; margin-right: 8px; border-radius: 50%; }
-        .blue { background: #2196F3; }
-        .red { background: #f44336; }
-        .orange { background: #ff9800; }
-        .green { background: #4CAF50; }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
+        .legend-item { display: flex; align-items: center; margin: 4px 0; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        button {
+            width: 100%; padding: 8px; margin: 5px 0; border: none;
+            border-radius: 4px; cursor: pointer; font-weight: bold; color: white;
         }
-        
-        .modal-content {
-            background: white;
-            margin: 15% auto;
-            padding: 20px;
-            border-radius: 8px;
-            width: 300px;
-        }
-        
-        .modal-content input, .modal-content textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
+        .btn-blue { background: #2196F3; }
+        .btn-red { background: #f44336; }
+        .btn-yellow { background: #ff9800; color: black; }
+        .btn-purple { background: #9b59b6; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     
-    <div class="controls">
+    <div class="panel">
         <h3>📍 Карта БС МТС</h3>
-        
-        <div class="stats">
-            <div><strong>Всего БС:</strong> <span id="totalCount">0</span></div>
-            <div style="color: #2196F3">🔵 Новые: <span id="newCount">0</span></div>
-            <div style="color: #f44336">🔴 Проблемные: <span id="problemCount">0</span></div>
-            <div style="color: #ff9800">🟠 В работе: <span id="progressCount">0</span></div>
-            <div style="color: #4CAF50">🟢 Выполнено: <span id="doneCount">0</span></div>
-        </div>
-        
-        <button class="btn-primary" onclick="resetView()">🗺️ Сбросить вид</button>
-        <button class="btn-warning" onclick="testFirebase()">🔌 Проверить Firebase</button>
-        <button class="btn-login" onclick="toggleAdmin()">👤 Вход как админ</button>
-    </div>
-    
-    <div class="legend">
-        <div class="legend-item"><div class="legend-color blue"></div>🔵 Новая</div>
-        <div class="legend-item"><div class="legend-color red"></div>🔴 Проблемная</div>
-        <div class="legend-item"><div class="legend-color orange"></div>🟠 В работе</div>
-        <div class="legend-item"><div class="legend-color green"></div>🟢 Выполнено</div>
+        <div class="stat">📊 Всего: <b id="total">0</b></div>
+        <div class="stat" style="color:#2196F3">🔵 Новые: <b id="count-new">0</b></div>
+        <div class="stat" style="color:#f44336">🔴 Проблемные: <b id="count-problem">0</b></div>
+        <div class="stat" style="color:#ff9800"> В работе: <b id="count-progress">0</b></div>
+        <div class="stat" style="color:#9b59b6">🟣 Свободный доступ: <b id="count-free">0</b></div>
+        <hr>
+        <button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
     </div>
 
-    <div id="workerModal" class="modal">
-        <div class="modal-content">
-            <h4>👷 Взять БС в работу</h4>
-            <p style="font-size: 12px; margin: 10px 0;">Введите фамилию:</p>
-            <input type="text" id="workerName" placeholder="Иванов И.И." />
-            <button class="btn-success" onclick="confirmTakeToWork()">✅ Взять в работу</button>
-            <button class="btn-danger" onclick="closeModal()">❌ Отмена</button>
-        </div>
+    <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:#2196F3"></div>Новая</div>
+        <div class="legend-item"><div class="dot" style="background:#f44336"></div>Проблемная</div>
+        <div class="legend-item"><div class="dot" style="background:#ff9800"></div>В работе</div>
+        <div class="legend-item"><div class="dot" style="background:#9b59b6"></div>Свободный доступ</div>
     </div>
 
     <script>
@@ -139,139 +65,108 @@
             messagingSenderId: "692167313147",
             appId: "1:692167313147:web:9cdda8dec24c74ddd6d25e"
         };
-        
         firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const bsRef = database.ref('base_stations');
-        
-        let myMap;
-        let markersCollection;
-        let selectedBsKey = null;
-        let allBS = {};
-        
-        const statusColors = {
-            'new': '#2196F3',
-            'problem': '#f44336',
-            'in_progress': '#ff9800',
-            'done': '#4CAF50'
+        const db = firebase.database();
+        const bsRef = db.ref('base_stations');
+
+        let map, objectManager;
+        const presets = {
+            'new': 'islands#blueIcon',
+            'problem': 'islands#redIcon',
+            'in_progress': 'islands#yellowIcon',
+            'free_access': 'islands#violetIcon',
+            'done': 'islands#greenIcon'
         };
-        
+        const labels = {
+            'new': 'Новая', 'problem': 'Проблемная',
+            'in_progress': 'В работе', 'free_access': 'Свободный доступ', 'done': 'Выполнено'
+        };
+
         ymaps.ready(init);
-        
         function init() {
-            myMap = new ymaps.Map("map", {
-                center: [55.95, 37.6],
-                zoom: 11
-            });
-            
-            markersCollection = new ymaps.GeoObjectCollection();
-            myMap.geoObjects.add(markersCollection);
-            
-            console.log("✅ Карта инициализирована");
-            loadDataFromFirebase();
+            map = new ymaps.Map("map", { center: [55.95, 37.6], zoom: 10 });
+            objectManager = new ymaps.ObjectManager({ clusterize: true, gridSize: 32 });
+            map.geoObjects.add(objectManager);
+            loadData();
         }
-        
-        function loadDataFromFirebase() {
-            console.log("🔄 Загрузка данных из Firebase...");
-            
-            bsRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                allBS = data || {};
-                
-                console.log(`📊 Получено записей: ${Object.keys(allBS).length}`);
-                
-                markersCollection.removeAll();
-                
-                let counts = { new: 0, problem: 0, in_progress: 0, done: 0 };
-                
-                if (data) {
-                    Object.keys(data).forEach(key => {
-                        const bs = data[key];
-                        const color = statusColors[bs.status] || statusColors['new'];
-                        
-                        const placemark = new ymaps.Placemark(
-                            [bs.lat, bs.lon],
-                            {
-                                balloonContentHeader: bs.number || 'БС',
-                                balloonContentBody: `
-                                    <div style="max-width: 250px;">
-                                        <p><strong>Адрес:</strong> ${bs.address || 'Не указан'}</p>
-                                        <p><strong>Статус:</strong> ${bs.status}</p>
-                                        ${bs.worker ? `<p><strong>Монтажник:</strong> ${bs.worker}</p>` : ''}
-                                    </div>
-                                `,
-                                hintContent: `${bs.number} - ${bs.address}`
-                            },
-                            {
-                                preset: 'islands#circleIcon',
-                                iconColor: color
-                            }
-                        );
-                        
-                        placemark.events.add('click', () => {
-                            selectedBsKey = key;
-                        });
-                        
-                        markersCollection.add(placemark);
-                        counts[bs.status] = (counts[bs.status] || 0) + 1;
+
+        function loadData() {
+            bsRef.on('value', (snap) => {
+                const data = snap.val() || {};
+                const features = [];
+                let counts = { new: 0, problem: 0, in_progress: 0, free_access: 0, done: 0 };
+
+                Object.keys(data).forEach(key => {
+                    const bs = data[key];
+                    const status = bs.status || 'new';
+                    counts[status] = (counts[status] || 0) + 1;
+
+                    const shortNum = bs.number ? bs.number.replace('PL_77_', '') : key;
+                    
+                    // Формируем контент балуна
+                    let balloon = `<b>${bs.number || 'БС'}</b><br>`;
+                    balloon += `Адрес: ${bs.address || '—'}<br>`;
+                    balloon += `Статус: <b>${labels[status]}</b><br>`;
+                    if (bs.worker) balloon += `👷 Монтажник: <b>${bs.worker}</b><br>`;
+                    if (bs.problem) balloon += `⚠️ Проблема: ${bs.problem}<br>`;
+                    
+                    balloon += `<hr style="margin:5px 0">`;
+                    balloon += `<button onclick="takeToWork('${key}')" style="background:#ff9800;color:black;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟡 В работу</button>`;
+                    balloon += `<button onclick="markProblem('${key}')" style="background:#f44336;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🔴 Проблема</button>`;
+                    balloon += `<button onclick="markFree('${key}')" style="background:#9b59b6;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟣 Свободный доступ</button>`;
+                    balloon += `<button onclick="markDone('${key}')" style="background:#4CAF50;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟢 Готово</button>`;
+
+                    features.push({
+                        type: 'Feature',
+                        id: key,
+                        geometry: { type: 'Point', coordinates: [parseFloat(bs.lat), parseFloat(bs.lon)] },
+                        properties: {
+                            balloonContent: balloon,
+                            hintContent: `${bs.number} - ${bs.address}`,
+                            iconCaption: shortNum
+                        },
+                        options: {
+                            preset: presets[status] || presets['new'],
+                            iconCaptionMaxWidth: '200'
+                        }
                     });
-                }
-                
-                document.getElementById('totalCount').textContent = Object.keys(data || {}).length;
-                document.getElementById('newCount').textContent = counts.new || 0;
-                document.getElementById('problemCount').textContent = counts.problem || 0;
-                document.getElementById('progressCount').textContent = counts.in_progress || 0;
-                document.getElementById('doneCount').textContent = counts.done || 0;
-                
-                console.log(`✅ Загружено маркеров: ${Object.keys(data || {}).length}`);
-            }, (error) => {
-                console.error("❌ Ошибка загрузки:", error);
-                alert("Ошибка загрузки данных: " + error.message);
+                });
+
+                objectManager.removeAll();
+                objectManager.add(features);
+
+                document.getElementById('total').textContent = Object.keys(data).length;
+                document.getElementById('count-new').textContent = counts.new || 0;
+                document.getElementById('count-problem').textContent = counts.problem || 0;
+                document.getElementById('count-progress').textContent = counts.in_progress || 0;
+                document.getElementById('count-free').textContent = counts.free_access || 0;
             });
         }
-        
-        window.confirmTakeToWork = function() {
-            const workerName = document.getElementById('workerName').value.trim();
-            if (!workerName) {
-                alert('Введите фамилию!');
-                return;
-            }
-            
-            if (selectedBsKey) {
-                bsRef.child(selectedBsKey).update({ 
-                    status: 'in_progress',
-                    worker: workerName
-                });
-                alert('✅ БС взята в работу!');
-            }
-            closeModal();
-        };
-        
-        window.closeModal = function() {
-            document.getElementById('workerModal').style.display = 'none';
-        };
-        
-        window.resetView = function() {
-            myMap.setCenter([55.95, 37.6], 11);
-        };
-        
-        window.testFirebase = function() {
-            bsRef.once('value').then((snapshot) => {
-                const data = snapshot.val();
-                alert(`✅ Firebase подключен!\nВ базе: ${Object.keys(data || {}).length} БС`);
-            }).catch(err => {
-                alert('❌ Ошибка: ' + err.message);
-            });
-        };
-        
-        window.toggleAdmin = function() {
-            const password = prompt('Пароль:');
-            if (password === 'admin123') {
-                alert('✅ Админ панель будет добавлена');
-            } else {
-                alert('❌ Неверный пароль');
+
+        // Функции для кнопок в балуне (должны быть глобальными)
+        window.takeToWork = function(key) {
+            const name = prompt('Введите фамилию монтажника:');
+            if (name) {
+                bsRef.child(key).update({ status: 'in_progress', worker: name, problem: '' });
             }
         };
+        window.markProblem = function(key) {
+            const reason = prompt('Опишите проблему:');
+            if (reason) {
+                bsRef.child(key).update({ status: 'problem', problem: reason });
+            }
+        };
+        window.markFree = function(key) {
+            if(confirm('Отметить как "Свободный доступ"?')) {
+                bsRef.child(key).update({ status: 'free_access' });
+            }
+        };
+        window.markDone = function(key) {
+            if(confirm('Отметить как выполненную?')) {
+                bsRef.child(key).update({ status: 'done' });
+            }
+        };
+        window.resetView = function() { map.setCenter([55.95, 37.6], 10); };
     </script>
 </body>
 </html>
