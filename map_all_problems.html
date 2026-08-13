@@ -38,6 +38,10 @@
         .pool-pul3 { background: #e3f2fd; color: #1976d2; }
         .pool-pul4 { background: #f3e5f5; color: #7b1fa2; }
         .pool-pul5 { background: #e8f5e9; color: #388e3c; }
+        .worker-name {
+            background: #fff3cd; padding: 2px 6px; border-radius: 3px;
+            font-weight: bold; color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -45,9 +49,9 @@
     
     <div class="panel">
         <h3>🔴 Карта проблемных БС</h3>
-        <div class="stat">📊 Всего проблемных: <b id="total" style="color:#f44336">0</b></div>
-        <div class="stat" style="color:#ff9800">🟡 В работе: <b id="count-progress">0</b></div>
-        <div class="stat" style="color:#4CAF50">🟢 Выполнено: <b id="count-done">0</b></div>
+        <div class="stat"> Всего проблемных: <b id="total" style="color:#f44336">0</b></div>
+        <div class="stat" style="color:#ff9800"> В работе: <b id="count-progress">0</b></div>
+        <div class="stat" style="color:#4CAF50"> Выполнено: <b id="count-done">0</b></div>
         <div class="stat" style="color:#f44336">🔴 Проблемные: <b id="count-problem">0</b></div>
         <hr>
         <button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
@@ -114,12 +118,20 @@
                     balloon += `<span class="pool-badge pool-${pool.toLowerCase()}">${pool}</span><br>`;
                     balloon += `📍 Адрес: ${bs.address || '—'}<br>`;
                     balloon += `📊 Статус: <b>${labels[status]}</b><br>`;
-                    if (bs.worker) balloon += `👷 Монтажник: <b>${bs.worker}</b><br>`;
+                    
+                    if (bs.worker) {
+                        balloon += `👷 Монтажник: <span class="worker-name">${bs.worker}</span><br>`;
+                    } else {
+                        balloon += `👷 Монтажник: <i>не указан</i><br>`;
+                    }
+                    
                     if (bs.problem) balloon += `️ Проблема: ${bs.problem}<br>`;
-                    if (bs.problem_date) balloon += ` Дата проблемы: ${bs.problem_date}<br>`;
-                    if (bs.completed_date) balloon += `✅ Завершено: ${bs.completed_date}<br>`;
+                    if (bs.problem_date) balloon += `⏰ Дата проблемы: ${bs.problem_date}<br>`;
+                    if (bs.started_date) balloon += `▶️ Начало работ: ${bs.started_date}<br>`;
+                    if (bs.completed_date) balloon += `✅ Завершено: <b>${bs.completed_date}</b><br>`;
                     
                     balloon += `<hr style="margin:5px 0">`;
+                    
                     if (status !== 'in_progress') {
                         balloon += `<button onclick="takeToWork('${key}')" style="background:#ff9800;color:black;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟡 В работу</button>`;
                     }
@@ -127,7 +139,7 @@
                         balloon += `<button onclick="markProblem('${key}')" style="background:#f44336;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🔴 Проблема</button>`;
                     }
                     if (status !== 'done') {
-                        balloon += `<button onclick="markDone('${key}')" style="background:#4CAF50;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;"> Готово</button>`;
+                        balloon += `<button onclick="markDone('${key}')" style="background:#4CAF50;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟢 Готово</button>`;
                     }
 
                     features.push({
@@ -156,40 +168,84 @@
             });
         }
 
+        // ✅ ВЗЯТЬ В РАБОТУ - ФИО ОБЯЗАТЕЛЬНО
         window.takeToWork = function(key) {
-            const name = prompt('Введите фамилию монтажника:');
-            if (name) {
-                bsRef.child(key).update({ 
-                    status: 'in_progress', 
-                    worker: name, 
-                    problem: '',
-                    started_date: new Date().toLocaleString('ru-RU')
-                });
+            let name = prompt('⚠️ ОБЯЗАТЕЛЬНО: Введите ФИО монтажника, который берёт в работу:');
+            
+            // Проверяем что введено не пустое значение
+            while (!name || name.trim() === '') {
+                if (name === null) {
+                    // Пользователь нажал Отмена - отменяем действие
+                    alert('❌ Действие отменено. ФИО монтажника обязательно!');
+                    return;
+                }
+                name = prompt('️ ФИО обязательно! Введите фамилию монтажника:');
             }
+            
+            name = name.trim();
+            
+            const now = new Date();
+            bsRef.child(key).update({ 
+                status: 'in_progress', 
+                worker: name, 
+                problem: '',
+                started_date: now.toLocaleString('ru-RU'),
+                started_timestamp: now.toISOString()
+            });
+            
+            alert(`✅ БС взята в работу!\n👷 Монтажник: ${name}\n⏰ Время: ${now.toLocaleString('ru-RU')}`);
         };
         
+        // ✅ ПРОБЛЕМА - описание обязательно
         window.markProblem = function(key) {
-            const reason = prompt('Опишите проблему:');
-            if (reason) {
-                bsRef.child(key).update({ 
-                    status: 'problem', 
-                    problem: reason,
-                    problem_date: new Date().toLocaleString('ru-RU')
-                });
+            let reason = prompt('⚠️ ОБЯЗАТЕЛЬНО: Опишите проблему:');
+            
+            while (!reason || reason.trim() === '') {
+                if (reason === null) {
+                    alert(' Действие отменено. Описание проблемы обязательно!');
+                    return;
+                }
+                reason = prompt('⚠️ Описание проблемы обязательно! Введите текст:');
             }
+            
+            reason = reason.trim();
+            
+            const now = new Date();
+            bsRef.child(key).update({ 
+                status: 'problem', 
+                problem: reason,
+                problem_date: now.toLocaleString('ru-RU'),
+                problem_timestamp: now.toISOString()
+            });
+            
+            alert(`✅ Проблема зафиксирована!\n️ ${reason}\n⏰ Время: ${now.toLocaleString('ru-RU')}`);
         };
         
+        // ✅ ВЫПОЛНЕНО - ФИО обязательно
         window.markDone = function(key) {
-            const name = prompt('Введите фамилию монтажника (выполнившего):');
-            if (name) {
-                const now = new Date();
-                bsRef.child(key).update({ 
-                    status: 'done',
-                    worker: name,
-                    completed_date: now.toLocaleString('ru-RU'),
-                    completed_timestamp: now.toISOString()
-                });
+            let name = prompt('️ ОБЯЗАТЕЛЬНО: Введите ФИО монтажника, который выполнил работы:');
+            
+            while (!name || name.trim() === '') {
+                if (name === null) {
+                    alert('❌ Действие отменено. ФИО монтажника обязательно!');
+                    return;
+                }
+                name = prompt('⚠️ ФИО обязательно! Введите фамилию монтажника:');
             }
+            
+            name = name.trim();
+            
+            const now = new Date();
+            const completedDate = now.toLocaleString('ru-RU');
+            
+            bsRef.child(key).update({ 
+                status: 'done',
+                worker: name,
+                completed_date: completedDate,
+                completed_timestamp: now.toISOString()
+            });
+            
+            alert(`✅ БС выполнена!\n👷 Монтажник: ${name}\n⏰ Завершено: ${completedDate}`);
         };
         
         window.resetView = function() { map.setCenter([55.75, 37.57], 10); };
