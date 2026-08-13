@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта проблемных БС - ПУЛ3, ПУЛ4, ПУЛ5</title>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        .panel {
+            position: fixed; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 350px;
+        }
+        .panel h3 { margin: 0 0 10px 0; font-size: 16px; color: #f44336; }
+        .stat { margin: 5px 0; font-size: 13px; }
+        .legend {
+            position: fixed; bottom: 10px; left: 10px; z-index: 1000;
+            background: white; padding: 10px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 12px;
+        }
+        .legend-item { display: flex; align-items: center; margin: 4px 0; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        button {
+            width: 100%; padding: 8px; margin: 5px 0; border: none;
+            border-radius: 4px; cursor: pointer; font-weight: bold; color: white;
+        }
+        .btn-blue { background: #2196F3; }
+        .btn-yellow { background: #ff9800; color: black; }
+        .btn-green { background: #4CAF50; }
+        .pool-badge {
+            display: inline-block; padding: 2px 6px; border-radius: 3px;
+            font-size: 10px; font-weight: bold; margin-left: 5px;
+        }
+        .pool-pul3 { background: #e3f2fd; color: #1976d2; }
+        .pool-pul4 { background: #f3e5f5; color: #7b1fa2; }
+        .pool-pul5 { background: #e8f5e9; color: #388e3c; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="panel">
+        <h3>🔴 Карта проблемных БС</h3>
+        <div class="stat">📊 Всего проблемных: <b id="total" style="color:#f44336">0</b></div>
+        <div class="stat" style="color:#ff9800">🟡 В работе: <b id="count-progress">0</b></div>
+        <div class="stat" style="color:#4CAF50">🟢 Выполнено: <b id="count-done">0</b></div>
+        <div class="stat" style="color:#f44336">🔴 Проблемные: <b id="count-problem">0</b></div>
+        <hr>
+        <button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
+        <button class="btn-yellow" onclick="testFirebase()">🔌 Проверить Firebase</button>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:#f44336"></div>🔴 Проблемная</div>
+        <div class="legend-item"><div class="dot" style="background:#ff9800"></div>🟡 В работе</div>
+        <div class="legend-item"><div class="dot" style="background:#4CAF50"></div>🟢 Выполнено</div>
+        <hr style="margin:5px 0">
+        <div class="legend-item"><span class="pool-badge pool-pul3">ПУЛ3</span></div>
+        <div class="legend-item"><span class="pool-badge pool-pul4">ПУЛ4</span></div>
+        <div class="legend-item"><span class="pool-badge pool-pul5">ПУЛ5</span></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyALevpdEgAaZofIk3IJXaZ2v-Rdx-TXhJE",
+            authDomain: "mtc-bs-map.firebaseapp.com",
+            databaseURL: "https://mtc-bs-map-default-rtdb.firebaseio.com",
+            projectId: "mtc-bs-map",
+            storageBucket: "mtc-bs-map.firebasestorage.app",
+            messagingSenderId: "692167313147",
+            appId: "1:692167313147:web:9cdda8dec24c74ddd6d25e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const bsRef = db.ref('base_stations_problems');
+
+        let map, objectManager;
+        const presets = {
+            'problem': 'islands#redIcon',
+            'in_progress': 'islands#yellowIcon',
+            'done': 'islands#greenIcon'
+        };
+        const labels = {
+            'problem': 'Проблемная', 'in_progress': 'В работе', 'done': 'Выполнено'
+        };
+
+        ymaps.ready(init);
+        function init() {
+            map = new ymaps.Map("map", { center: [55.75, 37.57], zoom: 10 });
+            objectManager = new ymaps.ObjectManager({ clusterize: true, gridSize: 32 });
+            map.geoObjects.add(objectManager);
+            loadData();
+        }
+
+        function loadData() {
+            bsRef.on('value', (snap) => {
+                const data = snap.val() || {};
+                const features = [];
+                let counts = { problem: 0, in_progress: 0, done: 0 };
+
+                Object.keys(data).forEach(key => {
+                    const bs = data[key];
+                    const status = bs.status || 'problem';
+                    counts[status] = (counts[status] || 0) + 1;
+
+                    const shortNum = bs.number ? bs.number.replace('PL_77_', '') : key;
+                    const pool = bs.pool || 'ПУЛ5';
+                    
+                    let balloon = `<b>${bs.number || 'БС'}</b>`;
+                    balloon += `<span class="pool-badge pool-${pool.toLowerCase()}">${pool}</span><br>`;
+                    balloon += `📍 Адрес: ${bs.address || '—'}<br>`;
+                    balloon += `📊 Статус: <b>${labels[status]}</b><br>`;
+                    if (bs.worker) balloon += `👷 Монтажник: <b>${bs.worker}</b><br>`;
+                    if (bs.problem) balloon += `️ Проблема: ${bs.problem}<br>`;
+                    if (bs.problem_date) balloon += ` Дата проблемы: ${bs.problem_date}<br>`;
+                    if (bs.completed_date) balloon += `✅ Завершено: ${bs.completed_date}<br>`;
+                    
+                    balloon += `<hr style="margin:5px 0">`;
+                    if (status !== 'in_progress') {
+                        balloon += `<button onclick="takeToWork('${key}')" style="background:#ff9800;color:black;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟡 В работу</button>`;
+                    }
+                    if (status !== 'problem') {
+                        balloon += `<button onclick="markProblem('${key}')" style="background:#f44336;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🔴 Проблема</button>`;
+                    }
+                    if (status !== 'done') {
+                        balloon += `<button onclick="markDone('${key}')" style="background:#4CAF50;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;"> Готово</button>`;
+                    }
+
+                    features.push({
+                        type: 'Feature',
+                        id: key,
+                        geometry: { type: 'Point', coordinates: [parseFloat(bs.lat), parseFloat(bs.lon)] },
+                        properties: {
+                            balloonContent: balloon,
+                            hintContent: `${bs.number} - ${pool}`,
+                            iconCaption: shortNum
+                        },
+                        options: {
+                            preset: presets[status] || presets['problem'],
+                            iconCaptionMaxWidth: '200'
+                        }
+                    });
+                });
+
+                objectManager.removeAll();
+                objectManager.add(features);
+
+                document.getElementById('total').textContent = Object.keys(data).length;
+                document.getElementById('count-progress').textContent = counts.in_progress || 0;
+                document.getElementById('count-done').textContent = counts.done || 0;
+                document.getElementById('count-problem').textContent = counts.problem || 0;
+            });
+        }
+
+        window.takeToWork = function(key) {
+            const name = prompt('Введите фамилию монтажника:');
+            if (name) {
+                bsRef.child(key).update({ 
+                    status: 'in_progress', 
+                    worker: name, 
+                    problem: '',
+                    started_date: new Date().toLocaleString('ru-RU')
+                });
+            }
+        };
+        
+        window.markProblem = function(key) {
+            const reason = prompt('Опишите проблему:');
+            if (reason) {
+                bsRef.child(key).update({ 
+                    status: 'problem', 
+                    problem: reason,
+                    problem_date: new Date().toLocaleString('ru-RU')
+                });
+            }
+        };
+        
+        window.markDone = function(key) {
+            const name = prompt('Введите фамилию монтажника (выполнившего):');
+            if (name) {
+                const now = new Date();
+                bsRef.child(key).update({ 
+                    status: 'done',
+                    worker: name,
+                    completed_date: now.toLocaleString('ru-RU'),
+                    completed_timestamp: now.toISOString()
+                });
+            }
+        };
+        
+        window.resetView = function() { map.setCenter([55.75, 37.57], 10); };
+        window.testFirebase = function() {
+            bsRef.once('value').then((snap) => {
+                const data = snap.val();
+                alert(`✅ Firebase подключен!\nВ базе проблемных: ${Object.keys(data || {}).length} БС`);
+            }).catch(err => alert('❌ Ошибка: ' + err.message));
+        };
+    </script>
+</body>
+</html>
