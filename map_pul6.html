@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта БС - ПУЛ6 (Ventura 170)</title>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        
+        /* Панель статистики */
+        .panel {
+            position: fixed; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 300px;
+        }
+        .panel h3 { margin: 0 0 10px 0; font-size: 16px; }
+        .stat { margin: 5px 0; font-size: 13px; }
+        .legend {
+            position: fixed; bottom: 10px; left: 10px; z-index: 1000;
+            background: white; padding: 10px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 12px;
+        }
+        .legend-item { display: flex; align-items: center; margin: 4px 0; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        button {
+            width: 100%; padding: 8px; margin: 5px 0; border: none;
+            border-radius: 4px; cursor: pointer; font-weight: bold; color: white;
+        }
+        .btn-blue { background: #2196F3; }
+        .btn-yellow { background: #ff9800; color: black; }
+        
+        /* МОДАЛЬНОЕ ОКНО - блокирует всё */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .modal-content h2 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 10px;
+        }
+        .modal-content .info-row {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .modal-content .info-row b {
+            color: #555;
+        }
+        .modal-content label {
+            display: block;
+            margin: 15px 0 5px 0;
+            font-weight: bold;
+            color: #333;
+        }
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .modal-content input:focus, .modal-content select:focus {
+            border-color: #2196F3;
+            outline: none;
+        }
+        .modal-content .btn-submit {
+            background: #4CAF50;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+        }
+        .modal-content .btn-submit:hover {
+            background: #45a049;
+        }
+        .modal-content .btn-cancel {
+            background: #f44336;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            display: none; /* Скрыта по умолчанию */
+        }
+        .modal-content .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 13px;
+            color: #856404;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .status-new { background: #2196F3; }
+        .status-in_progress { background: #ff9800; color: black; }
+        .status-problem { background: #f44336; }
+        .status-done { background: #4CAF50; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="panel">
+        <h3>📍 Карта БС ПУЛ6 (Ventura 170)</h3>
+        <div class="stat">📊 Всего: <b id="total">0</b></div>
+        <div class="stat" style="color:#2196F3">🔵 Новые: <b id="count-new">0</b></div>
+        <div class="stat" style="color:#ff9800">🟡 В работе: <b id="count-progress">0</b></div>
+        <div class="stat" style="color:#4CAF50">🟢 Выполнено: <b id="count-done">0</b></div>
+        <div class="stat" style="color:#f44336">🔴 Проблемные: <b id="count-problem">0</b></div>
+        <hr>
+        <button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
+        <button class="btn-yellow" onclick="testFirebase()"> Проверить Firebase</button>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:#2196F3"></div> Новая</div>
+        <div class="legend-item"><div class="dot" style="background:#ff9800"></div>🟡 В работе (только админ)</div>
+        <div class="legend-item"><div class="dot" style="background:#4CAF50"></div> Выполнено</div>
+        <div class="legend-item"><div class="dot" style="background:#f44336"></div> Проблемная</div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО - блокирует всё -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <h2> БС: <span id="modalBsNumber"></span></h2>
+            
+            <div class="info-row"><b>📍 Адрес:</b> <span id="modalAddress"></span></div>
+            <div class="info-row"><b>🔋 Оборудование:</b> <span id="modalEquipment"></span></div>
+            <div class="info-row"><b>📊 Текущий статус:</b> <span id="modalStatus"></span></div>
+            <div class="info-row"><b>👷 Монтажник:</b> <span id="modalWorker"></span></div>
+            <div class="info-row"><b>▶️ Начало работ:</b> <span id="modalStarted"></span></div>
+            <div class="info-row"><b>✅ Завершено:</b> <span id="modalCompleted"></span></div>
+            <div class="info-row" id="modalProblemRow" style="display:none;"><b>️ Проблема:</b> <span id="modalProblem"></span></div>
+            
+            <div class="warning">
+                ⚠️ <b>Внимание!</b> Форма не закроется пока вы не введёте ФИО и не выберете статус.
+            </div>
+            
+            <label for="workerName">👷 ФИО монтажника (обязательно):</label>
+            <input type="text" id="workerName" placeholder="Введите фамилию и инициалы" autocomplete="off">
+            
+            <label for="statusSelect">📊 Изменить статус:</label>
+            <select id="statusSelect">
+                <option value="">-- Выберите статус --</option>
+                <option value="in_progress">🟡 В работу (только админ)</option>
+                <option value="done">🟢 Выполнено</option>
+                <option value="problem">🔴 Проблема</option>
+            </select>
+            
+            <label for="adminPassword" id="adminPasswordLabel" style="display:none;">🔑 Пароль администратора:</label>
+            <input type="password" id="adminPassword" placeholder="Введите пароль админа" style="display:none;">
+            
+            <button class="btn-submit" onclick="submitForm()">✅ Подтвердить</button>
+            <button class="btn-cancel" id="btnCancel" onclick="closeModal()">❌ Отмена (только админ)</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyALevpdEgAaZofIk3IJXaZ2v-Rdx-TXhJE",
+            authDomain: "mtc-bs-map.firebaseapp.com",
+            databaseURL: "https://mtc-bs-map-default-rtdb.firebaseio.com",
+            projectId: "mtc-bs-map",
+            storageBucket: "mtc-bs-map.firebasestorage.app",
+            messagingSenderId: "692167313147",
+            appId: "1:692167313147:web:9cdda8dec24c74ddd6d25e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const bsRef = db.ref('base_stations_pul6');
+        
+        const ADMIN_PASSWORD = "admin123"; // Пароль администратора
+        
+        let map, objectManager;
+        let currentKey = null;
+        let currentData = null;
+        
+        const presets = {
+            'new': 'islands#blueIcon',
+            'in_progress': 'islands#yellowIcon',
+            'done': 'islands#greenIcon',
+            'problem': 'islands#redIcon'
+        };
+        const labels = {
+            'new': 'Новая', 'in_progress': 'В работе', 'done': 'Выполнено', 'problem': 'Проблемная'
+        };
+
+        ymaps.ready(init);
+        function init() {
+            map = new ymaps.Map("map", { center: [55.75, 37.57], zoom: 10 });
+            objectManager = new ymaps.ObjectManager({ clusterize: true, gridSize: 32 });
+            map.geoObjects.add(objectManager);
+            loadData();
+        }
+
+        function loadData() {
+            bsRef.on('value', (snap) => {
+                const data = snap.val() || {};
+                const features = [];
+                let counts = { new: 0, in_progress: 0, done: 0, problem: 0 };
+
+                Object.keys(data).forEach(key => {
+                    const bs = data[key];
+                    const status = bs.status || 'new';
+                    counts[status] = (counts[status] || 0) + 1;
+
+                    const shortNum = bs.number ? bs.number.replace('PL_77_', '') : key;
+                    
+                    let balloon = `<b>${bs.number || 'БС'}</b><br>`;
+                    balloon += `📍 Адрес: ${bs.address || '—'}<br>`;
+                    if (bs.equipment) balloon += `🔋 Оборудование: ${bs.equipment}<br>`;
+                    if (bs.akb_type) balloon += `🔌 Тип АКБ: ${bs.akb_type}<br>`;
+                    if (bs.site_type) balloon += `📍 Тип: ${bs.site_type}<br>`;
+                    if (bs.placement) balloon += `️ Размещение: ${bs.placement}<br>`;
+                    balloon += `📊 Статус: <b>${labels[status]}</b><br>`;
+                    if (bs.worker) balloon += `👷 Монтажник: <b>${bs.worker}</b><br>`;
+                    if (bs.started_date) balloon += `▶️ Начало: ${bs.started_date}<br>`;
+                    if (bs.completed_date) balloon += `✅ Завершено: <b>${bs.completed_date}</b><br>`;
+                    if (bs.problem) balloon += `⚠️ Проблема: ${bs.problem}<br>`;
+                    
+                    balloon += `<hr style="margin:5px 0">`;
+                    balloon += `<i>Нажмите на маркер для открытия формы</i>`;
+
+                    features.push({
+                        type: 'Feature',
+                        id: key,
+                        geometry: { type: 'Point', coordinates: [parseFloat(bs.lat), parseFloat(bs.lon)] },
+                        properties: {
+                            balloonContent: balloon,
+                            hintContent: `${bs.number} - ${bs.address}`,
+                            iconCaption: shortNum
+                        },
+                        options: {
+                            preset: presets[status] || presets['new'],
+                            iconCaptionMaxWidth: '200'
+                        }
+                    });
+                });
+
+                objectManager.removeAll();
+                objectManager.add(features);
+
+                document.getElementById('total').textContent = Object.keys(data).length;
+                document.getElementById('count-new').textContent = counts.new || 0;
+                document.getElementById('count-progress').textContent = counts.in_progress || 0;
+                document.getElementById('count-done').textContent = counts.done || 0;
+                document.getElementById('count-problem').textContent = counts.problem || 0;
+            });
+        }
+
+        // Обработка клика на маркер
+        objectManager?.events?.add('click', (e) => {
+            const id = e.get('id');
+            if (id) openModal(id);
+        });
+
+        function openModal(key) {
+            currentKey = key;
+            
+            bsRef.child(key).once('value').then((snap) => {
+                currentData = snap.val();
+                if (!currentData) return;
+                
+                // Заполняем модальное окно
+                document.getElementById('modalBsNumber').textContent = currentData.number || key;
+                document.getElementById('modalAddress').textContent = currentData.address || '—';
+                document.getElementById('modalEquipment').textContent = currentData.equipment || '—';
+                document.getElementById('modalWorker').textContent = currentData.worker || 'не указан';
+                document.getElementById('modalStarted').textContent = currentData.started_date || 'не зафиксировано';
+                document.getElementById('modalCompleted').textContent = currentData.completed_date || '—';
+                
+                const status = currentData.status || 'new';
+                const statusEl = document.getElementById('modalStatus');
+                statusEl.innerHTML = `<span class="status-badge status-${status}">${labels[status]}</span>`;
+                
+                if (currentData.problem) {
+                    document.getElementById('modalProblem').textContent = currentData.problem;
+                    document.getElementById('modalProblemRow').style.display = 'block';
+                } else {
+                    document.getElementById('modalProblemRow').style.display = 'none';
+                }
+                
+                // Очищаем поля формы
+                document.getElementById('workerName').value = '';
+                document.getElementById('statusSelect').value = '';
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').style.display = 'none';
+                document.getElementById('adminPasswordLabel').style.display = 'none';
+                document.getElementById('btnCancel').style.display = 'none';
+                
+                // Показываем модальное окно
+                document.getElementById('modalOverlay').classList.add('active');
+                
+                // Фокус на поле ФИО
+                setTimeout(() => document.getElementById('workerName').focus(), 100);
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            currentKey = null;
+            currentData = null;
+        }
+
+        // Обработка выбора статуса
+        document.getElementById('statusSelect').addEventListener('change', function() {
+            const status = this.value;
+            if (status === 'in_progress') {
+                document.getElementById('adminPassword').style.display = 'block';
+                document.getElementById('adminPasswordLabel').style.display = 'block';
+                document.getElementById('btnCancel').style.display = 'block';
+            } else {
+                document.getElementById('adminPassword').style.display = 'none';
+                document.getElementById('adminPasswordLabel').style.display = 'none';
+                document.getElementById('btnCancel').style.display = 'none';
+            }
+        });
+
+        function submitForm() {
+            const worker = document.getElementById('workerName').value.trim();
+            const newStatus = document.getElementById('statusSelect').value;
+            const adminPass = document.getElementById('adminPassword').value;
+            
+            // Проверка ФИО
+            if (!worker) {
+                alert('⚠️ Обязательно введите ФИО монтажника!');
+                document.getElementById('workerName').focus();
+                return;
+            }
+            
+            // Проверка статуса
+            if (!newStatus) {
+                alert('⚠️ Выберите статус!');
+                return;
+            }
+            
+            // Проверка пароля админа для статуса "в работу"
+            if (newStatus === 'in_progress' && adminPass !== ADMIN_PASSWORD) {
+                alert('❌ Неверный пароль администратора!');
+                document.getElementById('adminPassword').focus();
+                return;
+            }
+            
+            // Формируем данные для обновления
+            const updateData = {
+                worker: worker
+            };
+            
+            const now = new Date();
+            const nowStr = now.toLocaleString('ru-RU');
+            
+            // Если статус "в работу" - фиксируем время начала
+            if (newStatus === 'in_progress') {
+                updateData.status = 'in_progress';
+                updateData.started_date = nowStr;
+                updateData.started_timestamp = now.toISOString();
+                updateData.completed_date = '';
+                updateData.problem = '';
+            }
+            // Если статус "выполнено" - фиксируем время завершения
+            else if (newStatus === 'done') {
+                updateData.status = 'done';
+                updateData.completed_date = nowStr;
+                updateData.completed_timestamp = now.toISOString();
+            }
+            // Если статус "проблема"
+            else if (newStatus === 'problem') {
+                updateData.status = 'problem';
+                updateData.problem_date = nowStr;
+            }
+            
+            // Обновляем в Firebase
+            bsRef.child(currentKey).update(updateData).then(() => {
+                alert(`✅ Статус обновлён!\n\n👷 Монтажник: ${worker}\n📊 Статус: ${labels[newStatus]}\n⏰ Время: ${nowStr}`);
+                closeModal();
+            }).catch(err => {
+                alert('❌ Ошибка: ' + err.message);
+            });
+        }
+
+        // Закрытие по Escape только для админа (если открыта кнопка отмены)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('modalOverlay').classList.contains('active')) {
+                if (document.getElementById('btnCancel').style.display !== 'none') {
+                    closeModal();
+                }
+            }
+        });
+
+        window.resetView = function() { map.setCenter([55.75, 37.57], 10); };
+        window.testFirebase = function() {
+            bsRef.once('value').then((snap) => {
+                const data = snap.val();
+                alert(`✅ Firebase подключен!\nВ базе ПУЛ6: ${Object.keys(data || {}).length} БС`);
+            }).catch(err => alert('❌ Ошибка: ' + err.message));
+        };
+    </script>
+</body>
+</html>
