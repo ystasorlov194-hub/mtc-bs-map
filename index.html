@@ -1,174 +1,145 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карта БС МТС</title>
-    <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        #map { width: 100vw; height: 100vh; }
-        .panel {
-            position: fixed; top: 10px; right: 10px; z-index: 1000;
-            background: white; padding: 15px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 300px;
-        }
-        .panel h3 { margin: 0 0 10px 0; font-size: 16px; }
-        .stat { margin: 5px 0; font-size: 13px; }
-        .legend {
-            position: fixed; bottom: 10px; left: 10px; z-index: 1000;
-            background: white; padding: 10px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 12px;
-        }
-        .legend-item { display: flex; align-items: center; margin: 4px 0; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
-        button {
-            width: 100%; padding: 8px; margin: 5px 0; border: none;
-            border-radius: 4px; cursor: pointer; font-weight: bold; color: white;
-        }
-        .btn-blue { background: #2196F3; }
-        .btn-red { background: #f44336; }
-        .btn-yellow { background: #ff9800; color: black; }
-        .btn-purple { background: #9b59b6; }
-    </style>
-</head>
-<body>
-    <div id="map"></div>
-    
-    <div class="panel">
-        <h3>📍 Карта БС МТС</h3>
-        <div class="stat"> Всего: <b id="total">0</b></div>
-<div class="stat" style="color:#2196F3">🔵 Новые: <b id="count-new">0</b></div>
-<div class="stat" style="color:#f44336">🔴 Проблемные: <b id="count-problem">0</b></div>
-<div class="stat" style="color:#ff9800">🟡 В работе: <b id="count-progress">0</b></div>
-<div class="stat" style="color:#4CAF50">🟢 Выполнено: <b id="count-done">0</b></div>
-<div class="stat" style="color:#9b59b6">🟣 Свободный доступ: <b id="count-free">0</b></div>
-        <hr>
-        <button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
-    </div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карта БС МТС</title>
+<script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+body{margin:0;font-family:Arial,sans-serif} #map{width:100vw;height:100vh}
+.panel{position:fixed;top:10px;right:10px;z-index:1000;background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 10px #0003;max-width:320px}
+.stat{margin:5px 0;font-size:13px}.legend{position:fixed;bottom:10px;left:10px;z-index:1000;background:#fff;padding:10px;border-radius:8px;box-shadow:0 2px 10px #0003;font-size:12px}
+.legend-item{display:flex;align-items:center;margin:4px 0}.dot{width:12px;height:12px;border-radius:50%;margin-right:8px}
+button{padding:8px;margin:4px 0;border:0;border-radius:4px;cursor:pointer;font-weight:bold}.btn-blue{background:#2196F3;color:#fff}.btn-admin{background:#9c27b0;color:#fff}.btn-admin.on{background:#4CAF50}
+.modal{display:none;position:fixed;inset:0;background:#0009;z-index:9999;align-items:center;justify-content:center}.modal.on{display:flex}
+.box{background:#fff;width:min(520px,92vw);max-height:90vh;overflow:auto;padding:22px;border-radius:10px}.box input,.box textarea{width:100%;box-sizing:border-box;padding:9px;margin:5px 0 12px}.history{background:#f5f5f5;padding:8px;border-radius:5px;margin:6px 0;font-size:13px}
+.action{width:100%;color:#fff}.yellow{background:#ff9800;color:#111}.green{background:#4CAF50}.red{background:#f44336}.gray{background:#777}
+</style>
+</head><body>
+<div id="map"></div>
+<div class="panel">
+<h3>📍 Карта БС МТС — ПУЛ1</h3>
+<div class="stat">Всего: <b id="total">0</b></div>
+<div class="stat" style="color:#2196F3">🔵 Новые: <b id="nnew">0</b></div>
+<div class="stat" style="color:#ff9800">🟡 В работе: <b id="nwork">0</b></div>
+<div class="stat" style="color:#f44336">🔴 Проблемные: <b id="nproblem">0</b></div>
+<hr>
+<button class="btn-admin" id="adminBtn" onclick="toggleAdmin()">🔑 Войти как админ</button>
+<button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
+</div>
+<div class="legend">
+<div class="legend-item"><div class="dot" style="background:#2196F3"></div>Новая</div>
+<div class="legend-item"><div class="dot" style="background:#ff9800"></div>В работе</div>
+<div class="legend-item"><div class="dot" style="background:#f44336"></div>Проблемная</div>
+</div>
 
-    <div class="legend">
-        <div class="legend-item"><div class="dot" style="background:#2196F3"></div>Новая</div>
-        <div class="legend-item"><div class="dot" style="background:#f44336"></div>Проблемная</div>
-        <div class="legend-item"><div class="dot" style="background:#ff9800"></div>В работе</div>
-        <div class="legend-item"><div class="dot" style="background:#9b59b6"></div>Свободный доступ</div>
-    </div>
+<div class="modal" id="modal"><div class="box">
+<h2 id="title">БС</h2><div id="info"></div><div id="actions"></div>
+<h3>История</h3><div id="history"></div>
+<button class="action gray" onclick="closeModal()">Закрыть</button>
+</div></div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyALevpdEgAaZofIk3IJXaZ2v-Rdx-TXhJE",
-            authDomain: "mtc-bs-map.firebaseapp.com",
-            databaseURL: "https://mtc-bs-map-default-rtdb.firebaseio.com",
-            projectId: "mtc-bs-map",
-            storageBucket: "mtc-bs-map.firebasestorage.app",
-            messagingSenderId: "692167313147",
-            appId: "1:692167313147:web:9cdda8dec24c74ddd6d25e"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const bsRef = db.ref('base_stations');
+<script>
+const firebaseConfig={apiKey:"AIzaSyALevpdEgAaZofIk3IJXaZ2v-Rdx-TXhJE",authDomain:"mtc-bs-map.firebaseapp.com",databaseURL:"https://mtc-bs-map-default-rtdb.firebaseio.com",projectId:"mtc-bs-map",storageBucket:"mtc-bs-map.firebasestorage.app",messagingSenderId:"692167313147",appId:"1:692167313147:web:9cdda8dec24c74ddd6d25e"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database(), bsRef=db.ref("base_stations");
+const ADMIN_PASSWORD="admin123";
+let isAdmin=false,map,om,currentKey=null,currentBs=null;
+const presets={new:"islands#blueIcon",in_progress:"islands#yellowIcon",problem:"islands#redIcon"};
+const labels={new:"Новая",in_progress:"В работе",problem:"Проблемная",done:"Выполнено",free_access:"Свободный доступ"};
 
-        let map, objectManager;
-        const presets = {
-            'new': 'islands#blueIcon',
-            'problem': 'islands#redIcon',
-            'in_progress': 'islands#yellowIcon',
-            'free_access': 'islands#violetIcon',
-            'done': 'islands#greenIcon'
-        };
-        const labels = {
-            'new': 'Новая', 'problem': 'Проблемная',
-            'in_progress': 'В работе', 'free_access': 'Свободный доступ', 'done': 'Выполнено'
-        };
+ymaps.ready(()=>{map=new ymaps.Map("map",{center:[55.95,37.6],zoom:10});om=new ymaps.ObjectManager({clusterize:true,gridSize:32});map.geoObjects.add(om);om.events.add("click",e=>openBs(e.get("objectId")));loadData()});
 
-        ymaps.ready(init);
-        function init() {
-            map = new ymaps.Map("map", { center: [55.95, 37.6], zoom: 10 });
-            objectManager = new ymaps.ObjectManager({ clusterize: true, gridSize: 32 });
-            map.geoObjects.add(objectManager);
-            loadData();
-        }
+function normalizedStatus(s){ return s==="free_access" ? "new" : (s||"new"); }
+function validCoords(bs){return Number.isFinite(parseFloat(bs.lat))&&Number.isFinite(parseFloat(bs.lon));}
 
-        function loadData() {
-            bsRef.on('value', (snap) => {
-                const data = snap.val() || {};
-                const features = [];
-                let counts = { new: 0, problem: 0, in_progress: 0, free_access: 0, done: 0 };
+function loadData(){
+ bsRef.on("value",snap=>{
+  const data=snap.val()||{}, features=[]; let c={new:0,in_progress:0,problem:0};
+  Object.entries(data).forEach(([key,bs])=>{
+   let st=normalizedStatus(bs.status);
+   if(st==="done") return; // done не показываем; удаление выполняет отдельный безопасный скрипт
+   if(st==="free_access") st="new";
+   c[st]=(c[st]||0)+1;
+   if(!validCoords(bs)) return;
+   const short=(bs.number||key).replace("PL_77_","");
+   features.push({type:"Feature",id:key,geometry:{type:"Point",coordinates:[parseFloat(bs.lat),parseFloat(bs.lon)]},
+    properties:{hintContent:`${bs.number||key} - ${bs.address||""}`,iconCaption:short},
+    options:{preset:presets[st]||presets.new,iconCaptionMaxWidth:"200"}});
+  });
+  om.removeAll();om.add(features);
+  total.textContent=c.new+c.in_progress+c.problem;nnew.textContent=c.new||0;nwork.textContent=c.in_progress||0;nproblem.textContent=c.problem||0;
+ });
+}
 
-                Object.keys(data).forEach(key => {
-                    const bs = data[key];
-                    const status = bs.status || 'new';
-                    counts[status] = (counts[status] || 0) + 1;
+async function openBs(key){
+ currentKey=key; currentBs=(await bsRef.child(key).once("value")).val(); if(!currentBs)return;
+ const st=normalizedStatus(currentBs.status);
+ title.textContent=`📋 ${currentBs.number||key}`;
+ info.innerHTML=`<b>📍 Адрес:</b> ${esc(currentBs.address||"—")}<br><b>📊 Статус:</b> ${labels[st]||st}<br><b>👷 Исполнитель:</b> ${esc(currentBs.worker||"не назначен")}${currentBs.problem?`<br><b>⚠️ Проблема:</b> ${esc(currentBs.problem)}`:""}`;
+ actions.innerHTML="";
+ if(isAdmin){
+   if(st==="new") actions.innerHTML+=`<button class="action yellow" onclick="adminAssign()">🟡 Назначить и перевести В работу</button>`;
+   if(st==="in_progress"||st==="problem") actions.innerHTML+=`<button class="action yellow" onclick="adminReturnToWork()">↩️ Вернуть В работу / переназначить</button>`;
+   if(st!=="new") actions.innerHTML+=`<button class="action btn-blue" onclick="adminToNew()">🔵 Вернуть в Новые</button>`;
+ } else if(st==="in_progress"){
+   actions.innerHTML+=`<button class="action green" onclick="workerDone()">🟢 Выполнено</button><button class="action red" onclick="workerProblem()">🔴 Проблема</button>`;
+ } else if(st==="problem"){
+   actions.innerHTML+=`<div style="padding:8px;background:#fff3cd">Проблемная БС. Изменить статус обратно может только администратор.</div>`;
+ } else {
+   actions.innerHTML+=`<div style="padding:8px;background:#eee">БС ещё не назначена исполнителю.</div>`;
+ }
+ renderHistory(currentBs.history||{});
+ modal.classList.add("on");
+}
+function closeModal(){modal.classList.remove("on");currentKey=null;currentBs=null}
+function esc(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function renderHistory(h){
+ const arr=Object.values(h||{}).sort((a,b)=>(b.timestamp||"").localeCompare(a.timestamp||""));
+ history.innerHTML=arr.length?arr.map(x=>`<div class="history"><b>${esc(x.datetime||"")}</b> — ${esc(x.actor||"")}<br>${esc(labels[x.from]||x.from||"—")} → <b>${esc(labels[x.to]||x.to||"")}</b>${x.note?`<br>${esc(x.note)}`:""}</div>`).join(""):"Истории пока нет";
+}
+function now(){const d=new Date();return {datetime:d.toLocaleString("ru-RU"),timestamp:d.toISOString()}}
+async function writeChange(to,actor,note="",extra={}){
+ const from=normalizedStatus(currentBs.status), t=now(), ref=bsRef.child(currentKey);
+ const upd={status:to,...extra};
+ const hk=ref.child("history").push().key;
+ upd[`history/${hk}`]={from,to,actor,note,datetime:t.datetime,timestamp:t.timestamp};
+ await ref.update(upd); closeModal();
+}
 
-                    const shortNum = bs.number ? bs.number.replace('PL_77_', '') : key;
-                    
-                    // Формируем контент балуна
-                    let balloon = `<b>${bs.number || 'БС'}</b><br>`;
-                    balloon += `Адрес: ${bs.address || '—'}<br>`;
-                    balloon += `Статус: <b>${labels[status]}</b><br>`;
-                    if (bs.worker) balloon += `👷 Монтажник: <b>${bs.worker}</b><br>`;
-                    if (bs.problem) balloon += `⚠️ Проблема: ${bs.problem}<br>`;
-                    
-                    balloon += `<hr style="margin:5px 0">`;
-                    balloon += `<button onclick="takeToWork('${key}')" style="background:#ff9800;color:black;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟡 В работу</button>`;
-                    balloon += `<button onclick="markProblem('${key}')" style="background:#f44336;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🔴 Проблема</button>`;
-                    balloon += `<button onclick="markFree('${key}')" style="background:#9b59b6;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟣 Свободный доступ</button>`;
-                    balloon += `<button onclick="markDone('${key}')" style="background:#4CAF50;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;margin:2px;">🟢 Готово</button>`;
-
-                    features.push({
-                        type: 'Feature',
-                        id: key,
-                        geometry: { type: 'Point', coordinates: [parseFloat(bs.lat), parseFloat(bs.lon)] },
-                        properties: {
-                            balloonContent: balloon,
-                            hintContent: `${bs.number} - ${bs.address}`,
-                            iconCaption: shortNum
-                        },
-                        options: {
-                            preset: presets[status] || presets['new'],
-                            iconCaptionMaxWidth: '200'
-                        }
-                    });
-                });
-
-                objectManager.removeAll();
-                objectManager.add(features);
-
-                document.getElementById('total').textContent = Object.keys(data).length;
-document.getElementById('count-new').textContent = counts.new || 0;
-document.getElementById('count-problem').textContent = counts.problem || 0;
-document.getElementById('count-progress').textContent = counts.in_progress || 0;
-document.getElementById('count-done').textContent = counts.done || 0;
-document.getElementById('count-free').textContent = counts.free_access || 0;
-            });
-        }
-
-        // Функции для кнопок в балуне (должны быть глобальными)
-        window.takeToWork = function(key) {
-            const name = prompt('Введите фамилию монтажника:');
-            if (name) {
-                bsRef.child(key).update({ status: 'in_progress', worker: name, problem: '' });
-            }
-        };
-        window.markProblem = function(key) {
-            const reason = prompt('Опишите проблему:');
-            if (reason) {
-                bsRef.child(key).update({ status: 'problem', problem: reason });
-            }
-        };
-        window.markFree = function(key) {
-            if(confirm('Отметить как "Свободный доступ"?')) {
-                bsRef.child(key).update({ status: 'free_access' });
-            }
-        };
-        window.markDone = function(key) {
-            if(confirm('Отметить как выполненную?')) {
-                bsRef.child(key).update({ status: 'done' });
-            }
-        };
-        window.resetView = function() { map.setCenter([55.95, 37.6], 10); };
-    </script>
-</body>
-</html>
+async function adminAssign(){
+ if(!isAdmin)return alert("Только администратор.");
+ const worker=prompt("ФИО назначенного исполнителя:",""); if(!worker||!worker.trim())return alert("ФИО обязательно.");
+ await writeChange("in_progress","Администратор",`Назначен исполнитель: ${worker.trim()}`,{worker:worker.trim(),problem:"",started_date:now().datetime});
+}
+async function adminReturnToWork(){
+ if(!isAdmin)return alert("Только администратор.");
+ const worker=prompt("ФИО исполнителя:",currentBs.worker||""); if(!worker||!worker.trim())return alert("ФИО обязательно.");
+ await writeChange("in_progress","Администратор",`Возврат/переназначение: ${worker.trim()}`,{worker:worker.trim(),problem:"",started_date:now().datetime});
+}
+async function adminToNew(){
+ if(!isAdmin)return alert("Только администратор.");
+ if(!confirm("Вернуть БС в статус Новая?"))return;
+ await writeChange("new","Администратор","Возврат в Новые",{worker:"",problem:""});
+}
+async function workerDone(){
+ if(normalizedStatus(currentBs.status)!=="in_progress")return alert("Этот переход недоступен.");
+ const worker=currentBs.worker||""; if(!worker)return alert("У БС не назначен исполнитель. Обратитесь к администратору.");
+ if(!confirm(`Подтвердить выполнение?\nИсполнитель: ${worker}`))return;
+ await writeChange("done",worker,"Работы выполнены",{completed_date:now().datetime});
+}
+async function workerProblem(){
+ if(normalizedStatus(currentBs.status)!=="in_progress")return alert("Этот переход недоступен.");
+ const worker=currentBs.worker||""; if(!worker)return alert("У БС не назначен исполнитель. Обратитесь к администратору.");
+ let reason="";
+ while(!reason.trim()){reason=prompt("ОБЯЗАТЕЛЬНО опишите проблему:",""); if(reason===null)return; if(!reason.trim())alert("Без описания проблемы статус не изменится.");}
+ await writeChange("problem",worker,`Проблема: ${reason.trim()}`,{problem:reason.trim(),problem_date:now().datetime});
+}
+function toggleAdmin(){
+ if(isAdmin){isAdmin=false;adminBtn.textContent="🔑 Войти как админ";adminBtn.classList.remove("on");return}
+ const p=prompt("Пароль администратора:");if(p===ADMIN_PASSWORD){isAdmin=true;adminBtn.textContent="🔓 Выйти из админа";adminBtn.classList.add("on")}else if(p!==null)alert("Неверный пароль");
+}
+function resetView(){map.setCenter([55.95,37.6],10)}
+</script></body></html>
