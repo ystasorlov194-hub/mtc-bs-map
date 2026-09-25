@@ -4,142 +4,1152 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Карта БС МТС</title>
+
 <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
 <style>
-body{margin:0;font-family:Arial,sans-serif} #map{width:100vw;height:100vh}
-.panel{position:fixed;top:10px;right:10px;z-index:1000;background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 10px #0003;max-width:320px}
-.stat{margin:5px 0;font-size:13px}.legend{position:fixed;bottom:10px;left:10px;z-index:1000;background:#fff;padding:10px;border-radius:8px;box-shadow:0 2px 10px #0003;font-size:12px}
-.legend-item{display:flex;align-items:center;margin:4px 0}.dot{width:12px;height:12px;border-radius:50%;margin-right:8px}
-button{padding:8px;margin:4px 0;border:0;border-radius:4px;cursor:pointer;font-weight:bold}.btn-blue{background:#2196F3;color:#fff}.btn-admin{background:#9c27b0;color:#fff}.btn-admin.on{background:#4CAF50}
-.modal{display:none;position:fixed;inset:0;background:#0009;z-index:9999;align-items:center;justify-content:center}.modal.on{display:flex}
-.box{background:#fff;width:min(520px,92vw);max-height:90vh;overflow:auto;padding:22px;border-radius:10px}.box input,.box textarea{width:100%;box-sizing:border-box;padding:9px;margin:5px 0 12px}.history{background:#f5f5f5;padding:8px;border-radius:5px;margin:6px 0;font-size:13px}
-.action{width:100%;color:#fff}.yellow{background:#ff9800;color:#111}.green{background:#4CAF50}.red{background:#f44336}.gray{background:#777}
+body{margin:0;font-family:Arial,sans-serif}
+#map{width:100vw;height:100vh}
+
+.panel{
+ position:fixed;top:10px;right:10px;z-index:1000;
+ background:#fff;padding:15px;border-radius:8px;
+ box-shadow:0 2px 10px #0003;max-width:320px
+}
+
+.stat{margin:5px 0;font-size:13px}
+
+.legend{
+ position:fixed;bottom:10px;left:10px;z-index:1000;
+ background:#fff;padding:10px;border-radius:8px;
+ box-shadow:0 2px 10px #0003;font-size:12px
+}
+
+.legend-item{display:flex;align-items:center;margin:4px 0}
+.dot{width:12px;height:12px;border-radius:50%;margin-right:8px}
+
+button{
+ padding:8px;margin:4px 0;border:0;border-radius:4px;
+ cursor:pointer;font-weight:bold
+}
+
+.btn-blue{background:#2196F3;color:#fff}
+.btn-admin{background:#9c27b0;color:#fff}
+.btn-admin.on{background:#4CAF50}
+
+.modal{
+ display:none;position:fixed;inset:0;background:#0009;
+ z-index:9999;align-items:center;justify-content:center
+}
+
+.modal.on{display:flex}
+
+.box{
+ background:#fff;width:min(520px,92vw);max-height:90vh;
+ overflow:auto;padding:22px;border-radius:10px
+}
+
+.box input,.box textarea{
+ width:100%;box-sizing:border-box;padding:9px;margin:5px 0 12px
+}
+
+.history{
+ background:#f5f5f5;padding:8px;border-radius:5px;
+ margin:6px 0;font-size:13px
+}
+
+.action{width:100%;color:#fff}
+.yellow{background:#ff9800;color:#111}
+.green{background:#4CAF50}
+.red{background:#f44336}
+.gray{background:#777}
 </style>
-</head><body>
+</head>
+
+<body>
+
 <div id="map"></div>
+
 <div class="panel">
 <h3>📍 Карта БС МТС — ПУЛ1</h3>
-<div class="stat">Всего: <b id="total">0</b></div>
-<div class="stat" style="color:#2196F3">🔵 Новые: <b id="nnew">0</b></div>
-<div class="stat" style="color:#ff9800">🟡 В работе: <b id="nwork">0</b></div>
-<div class="stat" style="color:#f44336">🔴 Проблемные: <b id="nproblem">0</b></div>
-<hr>
-<button class="btn-admin" id="adminBtn" onclick="toggleAdmin()">🔑 Войти как админ</button>
-<button class="btn-blue" onclick="resetView()">🗺️ Сбросить вид</button>
-</div>
-<div class="legend">
-<div class="legend-item"><div class="dot" style="background:#2196F3"></div>Новая</div>
-<div class="legend-item"><div class="dot" style="background:#ff9800"></div>В работе</div>
-<div class="legend-item"><div class="dot" style="background:#f44336"></div>Проблемная</div>
+
+<div class="stat">
+Всего: <b id="total">0</b>
 </div>
 
-<div class="modal" id="modal"><div class="box">
-<h2 id="title">БС</h2><div id="info"></div><div id="actions"></div>
-<h3>История</h3><div id="history"></div>
-<button class="action gray" onclick="closeModal()">Закрыть</button>
-</div></div>
+<div class="stat" style="color:#2196F3">
+🔵 Новые: <b id="nnew">0</b>
+</div>
+
+<div class="stat" style="color:#ff9800">
+🟡 В работе: <b id="nwork">0</b>
+</div>
+
+<div class="stat" style="color:#f44336">
+🔴 Проблемные: <b id="nproblem">0</b>
+</div>
+
+<div class="stat" style="color:#4CAF50">
+🟢 Выполнено: <b id="ndone">0</b>
+</div>
+
+<hr>
+
+<button class="btn-admin" id="adminBtn" onclick="toggleAdmin()">
+🔑 Войти как админ
+</button>
+
+<button class="btn-blue" onclick="resetView()">
+🗺️ Сбросить вид
+</button>
+</div>
+
+
+<div class="legend">
+
+<div class="legend-item">
+<div class="dot" style="background:#2196F3"></div>
+Новая
+</div>
+
+<div class="legend-item">
+<div class="dot" style="background:#ff9800"></div>
+В работе
+</div>
+
+<div class="legend-item">
+<div class="dot" style="background:#f44336"></div>
+Проблемная
+</div>
+
+<div class="legend-item">
+<div class="dot" style="background:#4CAF50"></div>
+Выполнено
+</div>
+
+</div>
+
+
+<div class="modal" id="modal">
+<div class="box">
+
+<h2 id="title">БС</h2>
+
+<div id="info"></div>
+<div id="actions"></div>
+
+<h3>История</h3>
+<div id="history"></div>
+
+<button class="action gray" onclick="closeModal()">
+Закрыть
+</button>
+
+</div>
+</div>
+
 
 <script>
-const firebaseConfig={apiKey:"AIzaSyALevpdEgAaZofIk3IJXaZ2v-Rdx-TXhJE",authDomain:"mtc-bs-map.firebaseapp.com",databaseURL:"https://mtc-bs-map-default-rtdb.firebaseio.com",projectId:"mtc-bs-map",storageBucket:"mtc-bs-map.firebasestorage.app",messagingSenderId:"692167313147",appId:"1:692167313147:web:9cdda8dec24c74ddd6d25e"};
+
+/* =========================
+   FIREBASE
+========================= */
+
+const firebaseConfig={
+ apiKey:"AIzaSyALevpdEgAaZofIk3IJXaZ2v-Rdx-TXhJE",
+ authDomain:"mtc-bs-map.firebaseapp.com",
+ databaseURL:"https://mtc-bs-map-default-rtdb.firebaseio.com",
+ projectId:"mtc-bs-map",
+ storageBucket:"mtc-bs-map.firebasestorage.app",
+ messagingSenderId:"692167313147",
+ appId:"1:692167313147:web:9cdda8dec24c74ddd6d25e"
+};
+
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database(), bsRef=db.ref("base_stations");
+
+const db=firebase.database();
+const bsRef=db.ref("base_stations");
+
 const ADMIN_PASSWORD="admin123";
-let isAdmin=false,map,om,currentKey=null,currentBs=null;
-const presets={new:"islands#blueIcon",in_progress:"islands#yellowIcon",problem:"islands#redIcon"};
-const labels={new:"Новая",in_progress:"В работе",problem:"Проблемная",done:"Выполнено",free_access:"Свободный доступ"};
 
-ymaps.ready(()=>{map=new ymaps.Map("map",{center:[55.95,37.6],zoom:10});om=new ymaps.ObjectManager({clusterize:true,gridSize:32});map.geoObjects.add(om);om.events.add("click",e=>openBs(e.get("objectId")));loadData()});
+let isAdmin=false;
+let map;
+let om;
+let currentKey=null;
+let currentBs=null;
 
-function normalizedStatus(s){ return s==="free_access" ? "new" : (s||"new"); }
-function validCoords(bs){return Number.isFinite(parseFloat(bs.lat))&&Number.isFinite(parseFloat(bs.lon));}
+
+/* =========================
+   СТАТУСЫ
+========================= */
+
+const presets={
+ new:"islands#blueIcon",
+ in_progress:"islands#yellowIcon",
+ problem:"islands#redIcon",
+ done:"islands#greenIcon"
+};
+
+const labels={
+ new:"Новая",
+ in_progress:"В работе",
+ problem:"Проблемная",
+ done:"Выполнено",
+ free_access:"Свободный доступ"
+};
+
+
+/* =========================
+   КАРТА
+========================= */
+
+ymaps.ready(()=>{
+
+ map=new ymaps.Map("map",{
+  center:[55.95,37.6],
+  zoom:10
+ });
+
+ om=new ymaps.ObjectManager({
+  clusterize:true,
+  gridSize:32
+ });
+
+ map.geoObjects.add(om);
+
+ om.events.add("click",e=>{
+  openBs(e.get("objectId"));
+ });
+
+ loadData();
+});
+
+
+function normalizedStatus(s){
+ return s==="free_access" ? "new" : (s||"new");
+}
+
+
+function validCoords(bs){
+ return Number.isFinite(parseFloat(bs.lat)) &&
+        Number.isFinite(parseFloat(bs.lon));
+}
+
+
+/* =========================
+   ЗАГРУЗКА БС
+========================= */
 
 function loadData(){
+
  bsRef.on("value",snap=>{
-  const data=snap.val()||{}, features=[]; let c={new:0,in_progress:0,problem:0};
+
+  const data=snap.val()||{};
+  const features=[];
+
+  let c={
+   new:0,
+   in_progress:0,
+   problem:0,
+   done:0
+  };
+
+
   Object.entries(data).forEach(([key,bs])=>{
+
+   /*
+      Архивные БС физически остаются
+      в Firebase, но на рабочей карте
+      больше не отображаются.
+   */
+
+   if(bs.archived===true) return;
+
+
    let st=normalizedStatus(bs.status);
-   if(st==="done") return; // done не показываем; удаление выполняет отдельный безопасный скрипт
-   if(st==="free_access") st="new";
+
+   if(st==="free_access"){
+    st="new";
+   }
+
+
    c[st]=(c[st]||0)+1;
+
+
    if(!validCoords(bs)) return;
-   const short=(bs.number||key).replace("PL_77_","");
-   features.push({type:"Feature",id:key,geometry:{type:"Point",coordinates:[parseFloat(bs.lat),parseFloat(bs.lon)]},
-    properties:{hintContent:`${bs.number||key} - ${bs.address||""}`,iconCaption:short},
-    options:{preset:presets[st]||presets.new,iconCaptionMaxWidth:"200"}});
+
+
+   const short=(bs.number||key)
+       .replace("PL_77_","");
+
+
+   features.push({
+
+    type:"Feature",
+
+    id:key,
+
+    geometry:{
+     type:"Point",
+     coordinates:[
+      parseFloat(bs.lat),
+      parseFloat(bs.lon)
+     ]
+    },
+
+    properties:{
+     hintContent:
+      `${bs.number||key} - ${bs.address||""}`,
+     iconCaption:short
+    },
+
+    options:{
+     preset:presets[st]||presets.new,
+     iconCaptionMaxWidth:"200"
+    }
+
+   });
+
   });
-  om.removeAll();om.add(features);
-  total.textContent=c.new+c.in_progress+c.problem;nnew.textContent=c.new||0;nwork.textContent=c.in_progress||0;nproblem.textContent=c.problem||0;
+
+
+  om.removeAll();
+  om.add(features);
+
+
+  total.textContent=
+   (c.new||0)+
+   (c.in_progress||0)+
+   (c.problem||0)+
+   (c.done||0);
+
+
+  nnew.textContent=c.new||0;
+  nwork.textContent=c.in_progress||0;
+  nproblem.textContent=c.problem||0;
+  ndone.textContent=c.done||0;
+
  });
+
 }
+
+
+/* =========================
+   КАРТОЧКА БС
+========================= */
 
 async function openBs(key){
- currentKey=key; currentBs=(await bsRef.child(key).once("value")).val(); if(!currentBs)return;
+
+ currentKey=key;
+
+ currentBs=
+  (await bsRef.child(key)
+   .once("value")).val();
+
+
+ if(!currentBs) return;
+
+
  const st=normalizedStatus(currentBs.status);
- title.textContent=`📋 ${currentBs.number||key}`;
- info.innerHTML=`<b>📍 Адрес:</b> ${esc(currentBs.address||"—")}<br><b>📊 Статус:</b> ${labels[st]||st}<br><b>👷 Исполнитель:</b> ${esc(currentBs.worker||"не назначен")}${currentBs.problem?`<br><b>⚠️ Проблема:</b> ${esc(currentBs.problem)}`:""}`;
+
+
+ title.textContent=
+  `📋 ${currentBs.number||key}`;
+
+
+ info.innerHTML=
+
+  `<b>📍 Адрес:</b> ${esc(currentBs.address||"—")}
+   <br>
+
+   <b>📊 Статус:</b> ${labels[st]||st}
+   <br>
+
+   <b>👷 Исполнитель:</b>
+   ${esc(currentBs.worker||"не назначен")}
+
+   ${
+    currentBs.problem
+     ?
+     `<br>
+      <b>⚠️ Проблема:</b>
+      ${esc(currentBs.problem)}`
+     :
+     ""
+   }`;
+
+
  actions.innerHTML="";
+
+
+ /* =========================
+    АДМИНИСТРАТОР
+ ========================= */
+
  if(isAdmin){
-   if(st==="new") actions.innerHTML+=`<button class="action yellow" onclick="adminAssign()">🟡 Назначить и перевести В работу</button>`;
-   if(st==="in_progress"||st==="problem") actions.innerHTML+=`<button class="action yellow" onclick="adminReturnToWork()">↩️ Вернуть В работу / переназначить</button>`;
-   if(st!=="new") actions.innerHTML+=`<button class="action btn-blue" onclick="adminToNew()">🔵 Вернуть в Новые</button>`;
- } else if(st==="in_progress"){
-   actions.innerHTML+=`<button class="action green" onclick="workerDone()">🟢 Выполнено</button><button class="action red" onclick="workerProblem()">🔴 Проблема</button>`;
- } else if(st==="problem"){
-   actions.innerHTML+=`<div style="padding:8px;background:#fff3cd">Проблемная БС. Изменить статус обратно может только администратор.</div>`;
- } else {
-   actions.innerHTML+=`<div style="padding:8px;background:#eee">БС ещё не назначена исполнителю.</div>`;
+
+
+  if(st==="new"){
+
+   actions.innerHTML+=`
+
+   <button
+    class="action yellow"
+    onclick="adminAssign()">
+
+    🟡 Назначить и перевести В работу
+
+   </button>`;
+
+  }
+
+
+  if(st==="in_progress" || st==="problem"){
+
+   actions.innerHTML+=`
+
+   <button
+    class="action yellow"
+    onclick="adminReturnToWork()">
+
+    ↩️ Вернуть В работу / переназначить
+
+   </button>`;
+
+  }
+
+
+  if(st!=="new" && st!=="done"){
+
+   actions.innerHTML+=`
+
+   <button
+    class="action btn-blue"
+    onclick="adminToNew()">
+
+    🔵 Вернуть в Новые
+
+   </button>`;
+
+  }
+
+
+  /*
+     ВЫПОЛНЕННАЯ БС.
+
+     Только администратор может
+     подтвердить и убрать её
+     с рабочей карты.
+  */
+
+  if(st==="done"){
+
+   actions.innerHTML+=`
+
+   <div style="
+    padding:10px;
+    background:#dff0d8;
+    border-radius:5px;
+    margin:8px 0">
+
+    ✅ Монтажник отметил БС выполненной.
+    <br>
+    Проверьте результат перед архивированием.
+
+   </div>
+
+
+   <button
+    class="action green"
+    onclick="adminReturnDoneToWork()">
+
+    ↩️ Вернуть В работу
+
+   </button>
+
+
+   <button
+    class="action red"
+    onclick="adminArchiveDone()">
+
+    📦 Подтвердить выполнение и убрать с карты
+
+   </button>`;
+
+  }
+
  }
+
+
+ /* =========================
+    МОНТАЖНИК
+ ========================= */
+
+ else if(st==="in_progress"){
+
+  actions.innerHTML+=`
+
+  <button
+   class="action green"
+   onclick="workerDone()">
+
+   🟢 Выполнено
+
+  </button>
+
+
+  <button
+   class="action red"
+   onclick="workerProblem()">
+
+   🔴 Проблема
+
+  </button>`;
+
+ }
+
+
+ else if(st==="problem"){
+
+  actions.innerHTML+=`
+
+  <div style="
+   padding:8px;
+   background:#fff3cd">
+
+   Проблемная БС.
+   Изменить статус обратно может
+   только администратор.
+
+  </div>`;
+
+ }
+
+
+ else if(st==="done"){
+
+  actions.innerHTML+=`
+
+  <div style="
+   padding:10px;
+   background:#dff0d8;
+   border-radius:5px">
+
+   ✅ Выполнение отмечено.
+   <br>
+   Ожидается подтверждение администратора.
+
+  </div>`;
+
+ }
+
+
+ else{
+
+  actions.innerHTML+=`
+
+  <div style="
+   padding:8px;
+   background:#eee">
+
+   БС ещё не назначена исполнителю.
+
+  </div>`;
+
+ }
+
+
  renderHistory(currentBs.history||{});
+
  modal.classList.add("on");
-}
-function closeModal(){modal.classList.remove("on");currentKey=null;currentBs=null}
-function esc(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
-function renderHistory(h){
- const arr=Object.values(h||{}).sort((a,b)=>(b.timestamp||"").localeCompare(a.timestamp||""));
- history.innerHTML=arr.length?arr.map(x=>`<div class="history"><b>${esc(x.datetime||"")}</b> — ${esc(x.actor||"")}<br>${esc(labels[x.from]||x.from||"—")} → <b>${esc(labels[x.to]||x.to||"")}</b>${x.note?`<br>${esc(x.note)}`:""}</div>`).join(""):"Истории пока нет";
-}
-function now(){const d=new Date();return {datetime:d.toLocaleString("ru-RU"),timestamp:d.toISOString()}}
-async function writeChange(to,actor,note="",extra={}){
- const from=normalizedStatus(currentBs.status), t=now(), ref=bsRef.child(currentKey);
- const upd={status:to,...extra};
- const hk=ref.child("history").push().key;
- upd[`history/${hk}`]={from,to,actor,note,datetime:t.datetime,timestamp:t.timestamp};
- await ref.update(upd); closeModal();
+
 }
 
+
+/* =========================
+   ЗАКРЫТИЕ
+========================= */
+
+function closeModal(){
+
+ modal.classList.remove("on");
+
+ currentKey=null;
+ currentBs=null;
+
+}
+
+
+/* =========================
+   ЗАЩИТА HTML
+========================= */
+
+function esc(v){
+
+ return String(v).replace(
+  /[&<>"']/g,
+  m=>({
+   "&":"&amp;",
+   "<":"&lt;",
+   ">":"&gt;",
+   '"':"&quot;",
+   "'":"&#39;"
+  }[m])
+ );
+
+}
+
+
+/* =========================
+   ИСТОРИЯ
+========================= */
+
+function renderHistory(h){
+
+ const arr=
+  Object.values(h||{})
+   .sort(
+    (a,b)=>
+     (b.timestamp||"")
+     .localeCompare(a.timestamp||"")
+   );
+
+
+ history.innerHTML=
+  arr.length
+  ?
+  arr.map(x=>
+
+   `<div class="history">
+
+    <b>${esc(x.datetime||"")}</b>
+    —
+    ${esc(x.actor||"")}
+
+    <br>
+
+    ${esc(labels[x.from]||x.from||"—")}
+
+    →
+
+    <b>
+    ${esc(labels[x.to]||x.to||"")}
+    </b>
+
+    ${
+     x.note
+      ?
+      `<br>${esc(x.note)}`
+      :
+      ""
+    }
+
+   </div>`
+
+  ).join("")
+
+  :
+
+  "Истории пока нет";
+
+}
+
+
+/* =========================
+   ВРЕМЯ
+========================= */
+
+function now(){
+
+ const d=new Date();
+
+ return{
+  datetime:d.toLocaleString("ru-RU"),
+  timestamp:d.toISOString()
+ };
+
+}
+
+
+/* =========================
+   ИЗМЕНЕНИЕ СТАТУСА
+========================= */
+
+async function writeChange(
+ to,
+ actor,
+ note="",
+ extra={}
+){
+
+ const from=
+  normalizedStatus(currentBs.status);
+
+ const t=now();
+
+ const ref=
+  bsRef.child(currentKey);
+
+
+ const upd={
+  status:to,
+  ...extra
+ };
+
+
+ const hk=
+  ref.child("history")
+     .push().key;
+
+
+ upd[`history/${hk}`]={
+  from,
+  to,
+  actor,
+  note,
+  datetime:t.datetime,
+  timestamp:t.timestamp
+ };
+
+
+ await ref.update(upd);
+
+ closeModal();
+
+}
+
+
+/* =========================
+   АДМИН: НАЗНАЧИТЬ
+========================= */
+
 async function adminAssign(){
- if(!isAdmin)return alert("Только администратор.");
- const worker=prompt("ФИО назначенного исполнителя:",""); if(!worker||!worker.trim())return alert("ФИО обязательно.");
- await writeChange("in_progress","Администратор",`Назначен исполнитель: ${worker.trim()}`,{worker:worker.trim(),problem:"",started_date:now().datetime});
+
+ if(!isAdmin)
+  return alert("Только администратор.");
+
+
+ const worker=
+  prompt(
+   "ФИО назначенного исполнителя:",
+   ""
+  );
+
+
+ if(!worker || !worker.trim())
+  return alert("ФИО обязательно.");
+
+
+ await writeChange(
+
+  "in_progress",
+
+  "Администратор",
+
+  `Назначен исполнитель: ${worker.trim()}`,
+
+  {
+   worker:worker.trim(),
+   problem:"",
+   archived:false,
+   started_date:now().datetime
+  }
+
+ );
+
 }
+
+
+/* =========================
+   АДМИН: ВЕРНУТЬ В РАБОТУ
+========================= */
+
 async function adminReturnToWork(){
- if(!isAdmin)return alert("Только администратор.");
- const worker=prompt("ФИО исполнителя:",currentBs.worker||""); if(!worker||!worker.trim())return alert("ФИО обязательно.");
- await writeChange("in_progress","Администратор",`Возврат/переназначение: ${worker.trim()}`,{worker:worker.trim(),problem:"",started_date:now().datetime});
+
+ if(!isAdmin)
+  return alert("Только администратор.");
+
+
+ const worker=
+  prompt(
+   "ФИО исполнителя:",
+   currentBs.worker||""
+  );
+
+
+ if(!worker || !worker.trim())
+  return alert("ФИО обязательно.");
+
+
+ await writeChange(
+
+  "in_progress",
+
+  "Администратор",
+
+  `Возврат/переназначение: ${worker.trim()}`,
+
+  {
+   worker:worker.trim(),
+   problem:"",
+   archived:false,
+   started_date:now().datetime
+  }
+
+ );
+
 }
+
+
+/* =========================
+   DONE → В РАБОТУ
+========================= */
+
+async function adminReturnDoneToWork(){
+
+ if(!isAdmin)
+  return alert("Только администратор.");
+
+
+ if(
+  normalizedStatus(currentBs.status)
+  !=="done"
+ ){
+  return alert(
+   "БС не находится в статусе Выполнено."
+  );
+ }
+
+
+ if(!confirm(
+  "Вернуть выполненную БС обратно в работу?"
+ )) return;
+
+
+ await writeChange(
+
+  "in_progress",
+
+  "Администратор",
+
+  "Выполнение не подтверждено. БС возвращена в работу.",
+
+  {
+   archived:false,
+   completed_date:null
+  }
+
+ );
+
+}
+
+
+/* =========================
+   АДМИН: В НОВЫЕ
+========================= */
+
 async function adminToNew(){
- if(!isAdmin)return alert("Только администратор.");
- if(!confirm("Вернуть БС в статус Новая?"))return;
- await writeChange("new","Администратор","Возврат в Новые",{worker:"",problem:""});
+
+ if(!isAdmin)
+  return alert("Только администратор.");
+
+
+ if(!confirm(
+  "Вернуть БС в статус Новая?"
+ )) return;
+
+
+ await writeChange(
+
+  "new",
+
+  "Администратор",
+
+  "Возврат в Новые",
+
+  {
+   worker:"",
+   problem:"",
+   archived:false
+  }
+
+ );
+
 }
+
+
+/* =========================
+   МОНТАЖНИК: ВЫПОЛНЕНО
+========================= */
+
 async function workerDone(){
- if(normalizedStatus(currentBs.status)!=="in_progress")return alert("Этот переход недоступен.");
- const worker=currentBs.worker||""; if(!worker)return alert("У БС не назначен исполнитель. Обратитесь к администратору.");
- if(!confirm(`Подтвердить выполнение?\nИсполнитель: ${worker}`))return;
- await writeChange("done",worker,"Работы выполнены",{completed_date:now().datetime});
+
+ if(
+  normalizedStatus(currentBs.status)
+  !=="in_progress"
+ ){
+  return alert(
+   "Этот переход недоступен."
+  );
+ }
+
+
+ const worker=currentBs.worker||"";
+
+
+ if(!worker)
+  return alert(
+   "У БС не назначен исполнитель. Обратитесь к администратору."
+  );
+
+
+ if(!confirm(
+  `Подтвердить выполнение?\nИсполнитель: ${worker}`
+ )) return;
+
+
+ /*
+    ВАЖНО:
+
+    БС НЕ УДАЛЯЕТСЯ.
+
+    Она получает status=done
+    и становится зеленой.
+ */
+
+
+ await writeChange(
+
+  "done",
+
+  worker,
+
+  "Работы выполнены. Ожидается подтверждение администратора.",
+
+  {
+   archived:false,
+   completed_date:now().datetime
+  }
+
+ );
+
 }
+
+
+/* =========================
+   МОНТАЖНИК: ПРОБЛЕМА
+========================= */
+
 async function workerProblem(){
- if(normalizedStatus(currentBs.status)!=="in_progress")return alert("Этот переход недоступен.");
- const worker=currentBs.worker||""; if(!worker)return alert("У БС не назначен исполнитель. Обратитесь к администратору.");
+
+ if(
+  normalizedStatus(currentBs.status)
+  !=="in_progress"
+ ){
+  return alert(
+   "Этот переход недоступен."
+  );
+ }
+
+
+ const worker=currentBs.worker||"";
+
+
+ if(!worker)
+  return alert(
+   "У БС не назначен исполнитель. Обратитесь к администратору."
+  );
+
+
  let reason="";
- while(!reason.trim()){reason=prompt("ОБЯЗАТЕЛЬНО опишите проблему:",""); if(reason===null)return; if(!reason.trim())alert("Без описания проблемы статус не изменится.");}
- await writeChange("problem",worker,`Проблема: ${reason.trim()}`,{problem:reason.trim(),problem_date:now().datetime});
+
+
+ while(!reason.trim()){
+
+  reason=prompt(
+   "ОБЯЗАТЕЛЬНО опишите проблему:",
+   ""
+  );
+
+
+  if(reason===null) return;
+
+
+  if(!reason.trim())
+   alert(
+    "Без описания проблемы статус не изменится."
+   );
+
+ }
+
+
+ await writeChange(
+
+  "problem",
+
+  worker,
+
+  `Проблема: ${reason.trim()}`,
+
+  {
+   problem:reason.trim(),
+   problem_date:now().datetime
+  }
+
+ );
+
 }
+
+
+/* =========================
+   АРХИВАЦИЯ
+
+   НИКАКОГО remove()
+========================= */
+
+async function adminArchiveDone(){
+
+ if(!isAdmin)
+  return alert("Только администратор.");
+
+
+ if(
+  normalizedStatus(currentBs.status)
+  !=="done"
+ ){
+  return alert(
+   "Архивировать можно только выполненную БС."
+  );
+ }
+
+
+ if(!confirm(
+
+  `Подтвердить выполнение?\n\n` +
+
+  `БС: ${currentBs.number||currentKey}\n` +
+
+  `Исполнитель: ${currentBs.worker||"—"}\n\n` +
+
+  `БС исчезнет с рабочей карты,\n` +
+
+  `НО останется в Firebase и истории.`
+
+ )) return;
+
+
+ const t=now();
+
+ const ref=
+  bsRef.child(currentKey);
+
+
+ const hk=
+  ref.child("history")
+     .push().key;
+
+
+ /*
+    Здесь НЕТ remove().
+
+    Запись сохраняется целиком.
+ */
+
+
+ await ref.update({
+
+  archived:true,
+
+  archived_date:t.datetime,
+
+  archived_timestamp:t.timestamp,
+
+  archived_by:"Администратор",
+
+  [`history/${hk}`]:{
+
+   from:"done",
+   to:"archived",
+
+   actor:"Администратор",
+
+   note:
+    "Выполнение подтверждено. БС убрана с рабочей карты и сохранена в архиве.",
+
+   datetime:t.datetime,
+
+   timestamp:t.timestamp
+
+  }
+
+ });
+
+
+ closeModal();
+
+}
+
+
+/* =========================
+   АДМИН
+========================= */
+
 function toggleAdmin(){
- if(isAdmin){isAdmin=false;adminBtn.textContent="🔑 Войти как админ";adminBtn.classList.remove("on");return}
- const p=prompt("Пароль администратора:");if(p===ADMIN_PASSWORD){isAdmin=true;adminBtn.textContent="🔓 Выйти из админа";adminBtn.classList.add("on")}else if(p!==null)alert("Неверный пароль");
+
+ if(isAdmin){
+
+  isAdmin=false;
+
+  adminBtn.textContent=
+   "🔑 Войти как админ";
+
+  adminBtn.classList.remove("on");
+
+  return;
+
+ }
+
+
+ const p=
+  prompt("Пароль администратора:");
+
+
+ if(p===ADMIN_PASSWORD){
+
+  isAdmin=true;
+
+  adminBtn.textContent=
+   "🔓 Выйти из админа";
+
+  adminBtn.classList.add("on");
+
+ }
+
+ else if(p!==null){
+
+  alert("Неверный пароль");
+
+ }
+
 }
-function resetView(){map.setCenter([55.95,37.6],10)}
-</script></body></html>
+
+
+/* =========================
+   СБРОС ВИДА
+========================= */
+
+function resetView(){
+
+ map.setCenter(
+  [55.95,37.6],
+  10
+ );
+
+}
+
+</script>
+
+</body>
+</html>
