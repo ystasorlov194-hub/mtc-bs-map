@@ -83,6 +83,10 @@ button{
 🔵 Новые: <b id="nnew">0</b>
 </div>
 
+<div class="stat" style="color:#0044cc">
+🔷 Новые Паритет 170: <b id="nparitet">0</b>
+</div>
+
 <div class="stat" style="color:#ff9800">
 🟡 В работе: <b id="nwork">0</b>
 </div>
@@ -112,6 +116,11 @@ button{
 <div class="legend-item">
 <div class="dot" style="background:#2196F3"></div>
 Новая
+</div>
+
+<div class="legend-item">
+<div class="dot" style="background:#0044cc"></div>
+Новые Паритет 170
 </div>
 
 <div class="legend-item">
@@ -248,6 +257,8 @@ function loadData(){
 
   const data=snap.val()||{};
   const features=[];
+  let activeTotal=0;
+  let paritetNew=0;
 
   let c={
    new:0,
@@ -267,6 +278,8 @@ function loadData(){
 
    if(bs.archived===true) return;
 
+   activeTotal++;
+
 
    let st=normalizedStatus(bs.status);
 
@@ -275,7 +288,13 @@ function loadData(){
    }
 
 
-   c[st]=(c[st]||0)+1;
+   const isParitetNew=bs.status==="new" && bs.batch==="paritet_170";
+
+   if(isParitetNew){
+    paritetNew++;
+   }else{
+    c[st]=(c[st]||0)+1;
+   }
 
 
    if(!validCoords(bs)) return;
@@ -307,6 +326,7 @@ function loadData(){
 
     options:{
      preset:presets[st]||presets.new,
+     ...(isParitetNew ? {iconColor:"#0044cc"} : {}),
      iconCaptionMaxWidth:"200"
     }
 
@@ -319,14 +339,11 @@ function loadData(){
   om.add(features);
 
 
-  total.textContent=
-   (c.new||0)+
-   (c.in_progress||0)+
-   (c.problem||0)+
-   (c.done||0);
+  total.textContent=activeTotal;
 
 
   nnew.textContent=c.new||0;
+  document.getElementById("nparitet").textContent=paritetNew;
   nwork.textContent=c.in_progress||0;
   nproblem.textContent=c.problem||0;
   ndone.textContent=c.done||0;
